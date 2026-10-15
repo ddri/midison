@@ -13,10 +13,8 @@ from midison.theory import (
     midi_note_name,
     parse_pitch_class,
     parse_roman_numeral,
-    pitch_class_name,
     scale_pitch_classes,
 )
-
 
 # ---------------------------------------------------------------------------
 # Pitch class basics

@@ -1,9 +1,12 @@
 """Tests for voice_leading.py."""
 
-import pytest
 
-from midison.theory import parse_roman_numeral, parse_pitch_class
-from midison.voice_leading import _voicing_distance, choose_voicing_position, build_candidates
+from midison.theory import parse_pitch_class, parse_roman_numeral
+from midison.voice_leading import (
+    _voicing_distance,
+    build_candidates,
+    choose_voicing_position,
+)
 
 
 class TestVoicingDistance:

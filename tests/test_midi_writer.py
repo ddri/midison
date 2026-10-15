@@ -378,7 +378,7 @@ class TestVoiceLead:
         # k=-1 wins. Inversion stayed at 2 (pinned), but k was still optimized.
         assert v_notes == [62, 67, 71]
         # Inversion preserved: pitch classes are D-G-B = {2, 7, 11}
-        assert sorted(set(n % 12 for n in v_notes)) == [2, 7, 11]
+        assert sorted({n % 12 for n in v_notes}) == [2, 7, 11]
 
     def test_v13_never_lands_with_extension_in_bass(self, tmp_path):
         """V13's bass note must be a chord tone (R/3/5/7), never an extension (9/11/13)."""
@@ -494,7 +494,7 @@ class TestVoiceLead:
         # the inversion=1 must override that.)
         assert v_notes == [71, 74, 79]
         # Pitch classes are B-D-G = {2, 7, 11} (1st inversion preserved)
-        assert sorted(set(n % 12 for n in v_notes)) == [2, 7, 11]
+        assert sorted({n % 12 for n in v_notes}) == [2, 7, 11]
 
     def test_resolved_metadata_reports_chosen_inversion(self, tmp_path):
         """
@@ -545,6 +545,6 @@ class TestVoiceLead:
         # Inversion stayed at 0 (root); k=-1 chosen for register match.
         assert v_notes == [55, 59, 62]
         # Pitch classes G-B-D (root in bass)
-        assert sorted(set(n % 12 for n in v_notes)) == [2, 7, 11]
+        assert sorted({n % 12 for n in v_notes}) == [2, 7, 11]
         # Verify the bass note IS the root (G = pc 7), not 3rd or 5th
         assert min(v_notes) % 12 == 7

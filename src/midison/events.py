@@ -60,7 +60,7 @@ def _clamp_to_max_octave(notes: list[int], max_octave: int) -> list[int]:
 
 def _calc_velocity(humanize: HumanizeSpec, rng: random.Random, velocity_scale: float = 1.0) -> int:
     base = humanize.base_velocity * velocity_scale
-    velocity = int(round(base))
+    velocity = round(base)
     if humanize.velocity_range > 0:
         velocity += rng.randint(-humanize.velocity_range, humanize.velocity_range)
     return max(1, min(127, velocity))

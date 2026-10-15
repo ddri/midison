@@ -13,7 +13,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from midison.events import ResolvedProgression, TimedNote, resolve_progression_notes
+from midison.events import resolve_progression_notes
 from midison.midi_writer import GenerationRequest
 
 logger = logging.getLogger("midison.miditool")

@@ -3,17 +3,12 @@ Unit tests for real-time virtual MIDI streaming (midison.stream).
 """
 
 import threading
-import time
 from unittest.mock import MagicMock, patch
-
-import mido
-import pytest
 
 from midison.events import TimedNote
 from midison.midi_writer import ChordSpec, GenerationRequest
 from midison.stream import (
     get_available_output_ports,
-    open_midi_output,
     stop_all_notes,
     stream_notes,
     stream_progression,

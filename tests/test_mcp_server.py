@@ -386,6 +386,7 @@ def test_handle_send_to_ableton(isolated_config_dir, tmp_path):
 
 def test_handle_get_ableton_session_state():
     from unittest.mock import MagicMock, patch
+
     from midison.ableton import AbletonSessionState
 
     mock_client = MagicMock()
@@ -414,6 +415,7 @@ def test_handle_get_ableton_session_state():
 
 def test_call_tool_get_ableton_session_state():
     from unittest.mock import MagicMock, patch
+
     from midison.ableton import AbletonSessionState
 
     mock_client = MagicMock()
@@ -431,6 +433,7 @@ def test_call_tool_get_ableton_session_state():
 def test_handle_send_to_ableton_auto_sync(isolated_config_dir, tmp_path):
     config.set_output_directory(tmp_path / "out")
     from unittest.mock import MagicMock, patch
+
     from midison.ableton import AbletonSessionState
 
     mock_client = MagicMock()
@@ -496,7 +499,6 @@ def test_handle_stream_to_midi_port(isolated_config_dir, tmp_path):
 
 def test_handle_install_ableton_integrations(tmp_path):
     from unittest.mock import patch
-    from pathlib import Path
 
     fake_osc = tmp_path / "Remote Scripts" / "AbletonOSC"
     fake_m4l = tmp_path / "Max Generators" / "Midison Generator.amxd"

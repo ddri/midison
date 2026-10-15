@@ -14,6 +14,7 @@ import sys
 from pathlib import Path
 
 from midison import config
+from midison.ableton import AbletonClient, install_ableton_osc
 from midison.grooves import list_grooves
 from midison.midi_writer import (
     ChordSpec,
@@ -22,11 +23,10 @@ from midison.midi_writer import (
     PatternName,
     generate,
 )
+from midison.miditool import install_m4l_device, to_miditool_dict
+from midison.stream import stream_progression
 from midison.theory import MODE_INTERVALS, parse_pitch_class, parse_roman_numeral
 from midison.voicings import VoicingName
-from midison.stream import stream_progression
-from midison.ableton import AbletonClient, install_ableton_osc
-from midison.miditool import to_miditool_dict, install_m4l_device
 
 VALID_VOICINGS: tuple[VoicingName, ...] = (
     "close",
@@ -279,7 +279,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.install_ableton_osc:
         try:
             installed_path = install_ableton_osc()
-            print(f"\n✓ Installed AbletonOSC successfully to:")
+            print("\n✓ Installed AbletonOSC successfully to:")
             print(f"  {installed_path}")
             print("\nNext step in Ableton Live:")
             print("  1. Open Preferences / Settings (Cmd + ,)")
@@ -293,7 +293,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.install_m4l:
         try:
             installed_path = install_m4l_device()
-            print(f"\n✓ Installed Midison Generator.amxd successfully to:")
+            print("\n✓ Installed Midison Generator.amxd successfully to:")
             print(f"  {installed_path}")
             print("\nNext step in Ableton Live 12:")
             print("  1. Open the Piano Roll / Clip View on any MIDI clip.")
@@ -360,7 +360,7 @@ def main(argv: list[str] | None = None) -> int:
             if target_clip is None:
                 target_clip = session_state.selected_scene
             if bpm is None:
-                bpm = int(round(session_state.tempo))
+                bpm = round(session_state.tempo)
             key_info = f" | Live Key: {session_state.key_name} {session_state.scale_name}" if session_state.key_name else ""
             print(f"\n⚡ Synced with Ableton Live: {session_state.tempo:.1f} BPM ({session_state.time_signature}){key_info}")
             print(f"  Target: Track {target_track + 1} (idx {target_track}), Clip Slot {target_clip + 1} (idx {target_clip})")
@@ -404,7 +404,7 @@ def main(argv: list[str] | None = None) -> int:
                 fire=args.fire,
                 sync_session=False,
             )
-            print(f"\n✓ Injected directly into Ableton Live:")
+            print("\n✓ Injected directly into Ableton Live:")
             print(f"  Track:        Track {target_track + 1} (idx {target_track})")
             print(f"  Clip Slot:    Clip Slot {target_clip + 1} (idx {target_clip})")
             print(f"  Total Notes:  {injected['notes_count']}")

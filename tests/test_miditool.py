@@ -145,6 +145,7 @@ def test_generator_patcher_presentation_and_controls():
 
 def test_generator_embedded_js_syntax():
     import subprocess
+
     from midison.miditool import MIDISON_GENERATOR_JS
 
     # Check key function names
@@ -178,7 +179,7 @@ def test_generator_embedded_js_syntax():
     humanize(1);
     generate();
     """
-    res = subprocess.run(["node", "-e", script], capture_output=True, text=True)
+    res = subprocess.run(["node", "-e", script], check=False, capture_output=True, text=True)
     assert res.returncode == 0, f"Node syntax validation failed: {res.stderr}"
 
 
@@ -186,6 +187,7 @@ def test_generator_js_musical_timing_and_chords():
     """Verify that selecting preset 3 (i7 - iv7 - v7 - i7) produces 4 chords across 16 beats."""
     import json
     import subprocess
+
     from midison.miditool import MIDISON_GENERATOR_JS
 
     script = f"""
@@ -210,7 +212,7 @@ def test_generator_js_musical_timing_and_chords():
 
     console.log(JSON.stringify(outputPayload));
     """
-    res = subprocess.run(["node", "-e", script], capture_output=True, text=True)
+    res = subprocess.run(["node", "-e", script], check=False, capture_output=True, text=True)
     assert res.returncode == 0, f"Node failed: {res.stderr}"
 
     payload = json.loads(res.stdout)

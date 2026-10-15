@@ -2,17 +2,14 @@
 Unit tests for Ableton Live direct clip injection (midison.ableton).
 """
 
-from unittest.mock import MagicMock, patch
 from pathlib import Path
-
-import pytest
+from unittest.mock import MagicMock, patch
 
 from midison.ableton import (
     AbletonClient,
     find_ableton_remote_scripts_dir,
     install_ableton_osc,
 )
-from midison.events import TimedNote
 from midison.midi_writer import ChordSpec, GenerationRequest
 
 
@@ -122,8 +119,9 @@ def test_ableton_session_state_properties():
 
 
 def test_query_session_state_success():
-    import socket
+
     from pythonosc.osc_message_builder import OscMessageBuilder
+
     from midison.ableton import AbletonClient
 
     def make_dgram(address, *args):
@@ -144,7 +142,7 @@ def test_query_session_state_success():
 
     mock_sock = MagicMock()
     # Return packets in order, then raise socket.timeout
-    mock_sock.recvfrom.side_effect = list(packets) + [socket.timeout("timed out")]
+    mock_sock.recvfrom.side_effect = list(packets) + [TimeoutError("timed out")]
 
     client = AbletonClient()
     with patch.object(client, "_create_receive_socket", return_value=mock_sock):
@@ -166,8 +164,7 @@ def test_query_session_state_offline_fallback():
     from midison.ableton import AbletonClient
 
     mock_sock = MagicMock()
-    import socket
-    mock_sock.recvfrom.side_effect = socket.timeout("timed out")
+    mock_sock.recvfrom.side_effect = TimeoutError("timed out")
 
     client = AbletonClient()
     with patch.object(client, "_create_receive_socket", return_value=mock_sock):
@@ -220,7 +217,7 @@ def test_inject_progression_auto_sync():
     )
     with patch.object(client, "query_session_state", return_value=mock_session), \
          patch.object(client, "create_clip") as mock_create, \
-         patch.object(client, "add_notes") as mock_add, \
+         patch.object(client, "add_notes"), \
          patch.object(client, "fire_clip") as mock_fire:
 
         res = client.inject_progression(req, track_index=None, clip_index=None, fire=True)

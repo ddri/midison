@@ -1,5 +1,7 @@
 """Tests for voicings.py."""
 
+from typing import ClassVar
+
 import pytest
 
 from midison.voicings import apply_voicing
@@ -7,7 +9,7 @@ from midison.voicings import apply_voicing
 
 class TestVoicings:
     # Cmaj7 in close position: C4 E4 G4 B4 = MIDI 60 64 67 71
-    CMAJ7 = [60, 64, 67, 71]
+    CMAJ7: ClassVar[list[int]] = [60, 64, 67, 71]
 
     def test_close_is_passthrough_for_already_close(self):
         assert apply_voicing(list(self.CMAJ7), "close") == self.CMAJ7

@@ -9,23 +9,20 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-
-from typing import Literal
 
 import mido
 
+from midison.grooves import get_groove, select_voices, tile_groove_pulses
 from midison.theory import (
     ParsedNumeral,
     ResolvedChord,
+    build_chord,
     midi_note_name,
     parse_pitch_class,
     parse_roman_numeral,
-    pitch_class_name,
-    build_chord,
 )
-from midison.grooves import get_groove, select_voices, tile_groove_pulses
 from midison.voice_leading import build_candidates, choose_voicing_position
 from midison.voicings import VoicingName, apply_voicing
 
@@ -84,7 +81,7 @@ def generate(request: GenerationRequest, output_dir: Path) -> GenerationResult:
     """
     output_dir = Path(output_dir).expanduser().resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
-    generated_at = datetime.now(timezone.utc)
+    generated_at = datetime.now(UTC)
 
     rng = random.Random(request.seed) if request.seed is not None else random.Random()  # nosec B311
 
@@ -179,12 +176,12 @@ def generate(request: GenerationRequest, output_dir: Path) -> GenerationResult:
     # (abs_tick, ordering_key, type, note, velocity); ordering_key ensures
     # off-events at the same tick precede on-events.
     for i, (spec, parsed, chord, voiced) in enumerate(resolved_chords):
-        duration_ticks = int(round(spec.duration_beats * TICKS_PER_BEAT))
-        chord_start_tick = int(round(beat_offsets[i] * TICKS_PER_BEAT))
+        duration_ticks = round(spec.duration_beats * TICKS_PER_BEAT)
+        chord_start_tick = round(beat_offsets[i] * TICKS_PER_BEAT)
 
         pattern = spec.pattern
         if pattern == "strum" and len(voiced) > 1:
-            strum_step_ticks = int(round(15.0 * ticks_per_ms))
+            strum_step_ticks = round(15.0 * ticks_per_ms)
             sorted_voiced = sorted(voiced)
             for idx, note in enumerate(sorted_voiced):
                 note_start = chord_start_tick + idx * strum_step_ticks
@@ -200,8 +197,8 @@ def generate(request: GenerationRequest, output_dir: Path) -> GenerationResult:
             notes_order = sorted(voiced) if pattern == "arpeggio_up" else sorted(voiced, reverse=True)
             step_ticks = duration_ticks / len(notes_order)
             for idx, note in enumerate(notes_order):
-                note_start = chord_start_tick + int(round(idx * step_ticks))
-                note_end = chord_start_tick + int(round((idx + 1) * step_ticks))
+                note_start = chord_start_tick + round(idx * step_ticks)
+                note_end = chord_start_tick + round((idx + 1) * step_ticks)
                 velocity = _calc_velocity(request.humanize, rng)
                 timing_ticks = _calc_timing_offset(request.humanize, rng, ticks_per_ms)
                 on_tick = max(0, note_start + timing_ticks)
@@ -218,8 +215,8 @@ def generate(request: GenerationRequest, output_dir: Path) -> GenerationResult:
 
             pulses = tile_groove_pulses(groove, spec.duration_beats)
             for pulse in pulses:
-                p_start_tick = chord_start_tick + int(round(pulse.beat_offset * TICKS_PER_BEAT))
-                p_dur_ticks = int(round(pulse.duration_beats * TICKS_PER_BEAT))
+                p_start_tick = chord_start_tick + round(pulse.beat_offset * TICKS_PER_BEAT)
+                p_dur_ticks = round(pulse.duration_beats * TICKS_PER_BEAT)
                 p_end_tick = min(chord_start_tick + duration_ticks, p_start_tick + p_dur_ticks)
                 target_notes = select_voices(voiced, pulse.voice_target)
                 for note in target_notes:
@@ -257,7 +254,7 @@ def generate(request: GenerationRequest, output_dir: Path) -> GenerationResult:
 
 def _calc_velocity(humanize: HumanizeSpec, rng: random.Random, velocity_scale: float = 1.0) -> int:
     base = humanize.base_velocity * velocity_scale
-    velocity = int(round(base))
+    velocity = round(base)
     if humanize.velocity_range > 0:
         velocity += rng.randint(-humanize.velocity_range, humanize.velocity_range)
     return max(1, min(127, velocity))
@@ -266,7 +263,7 @@ def _calc_velocity(humanize: HumanizeSpec, rng: random.Random, velocity_scale: f
 def _calc_timing_offset(humanize: HumanizeSpec, rng: random.Random, ticks_per_ms: float) -> int:
     if humanize.timing_ms > 0:
         offset_ms = rng.randint(-humanize.timing_ms, humanize.timing_ms)
-        return int(round(offset_ms * ticks_per_ms))
+        return round(offset_ms * ticks_per_ms)
     return 0
 
 

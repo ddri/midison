@@ -20,6 +20,7 @@ from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
 
 from midison import config
+from midison.ableton import AbletonClient, install_ableton_osc
 from midison.grooves import list_grooves
 from midison.midi_writer import (
     ChordSpec,
@@ -27,10 +28,9 @@ from midison.midi_writer import (
     HumanizeSpec,
     generate,
 )
-from midison.theory import MODE_INTERVALS, parse_pitch_class
-from midison.stream import stream_progression
-from midison.ableton import AbletonClient, install_ableton_osc
 from midison.miditool import install_m4l_device
+from midison.stream import stream_progression
+from midison.theory import MODE_INTERVALS, parse_pitch_class
 
 logger = logging.getLogger("midison.mcp")
 
@@ -549,7 +549,7 @@ def handle_send_to_ableton(arguments: dict) -> dict:
         if getattr(session_state, "connected", False) is True:
             session_synced = True
             if "bpm" not in arguments or arguments["bpm"] is None:
-                arguments["bpm"] = int(round(session_state.tempo))
+                arguments["bpm"] = round(session_state.tempo)
             if "time_signature" not in arguments or arguments["time_signature"] is None:
                 arguments["time_signature"] = session_state.time_signature
             if "track_index" not in arguments or arguments["track_index"] is None:

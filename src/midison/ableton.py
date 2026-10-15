@@ -17,10 +17,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from pythonosc import osc_message_builder, udp_client
+from pythonosc import udp_client
 from pythonosc.osc_message import OscMessage
 
-from midison.events import ResolvedProgression, TimedNote, resolve_progression_notes
+from midison.events import TimedNote, resolve_progression_notes
 from midison.midi_writer import GenerationRequest
 
 logger = logging.getLogger("midison.ableton")
@@ -107,7 +107,7 @@ class AbletonClient:
             data, _ = sock.recvfrom(4096)
             msg = OscMessage(data)
             return list(msg.params)
-        except (socket.timeout, TimeoutError):
+        except TimeoutError:
             return None
         except Exception as exc:
             logger.debug("Error during OSC query '%s': %s", address, exc)
@@ -168,7 +168,7 @@ class AbletonClient:
                         state.root_note = int(params[0])
                     elif addr == "/live/song/get/scale_name" and params and params[0] is not None:
                         state.scale_name = str(params[0])
-                except (socket.timeout, TimeoutError):
+                except TimeoutError:
                     break
                 except Exception as exc:
                     logger.debug("Error reading OSC response packet: %s", exc)

@@ -137,6 +137,7 @@ class TestCliMain:
 
     def test_to_ableton_flag_offline(self, capsys, tmp_path):
         from unittest.mock import MagicMock, patch
+
         from midison.ableton import AbletonSessionState
 
         mock_client = MagicMock()
@@ -155,6 +156,7 @@ class TestCliMain:
 
     def test_to_ableton_flag_online_sync(self, capsys, tmp_path):
         from unittest.mock import MagicMock, patch
+
         from midison.ableton import AbletonSessionState
 
         mock_client = MagicMock()
@@ -188,6 +190,7 @@ class TestCliMain:
 
     def test_to_ableton_flag_user_override(self, capsys, tmp_path):
         from unittest.mock import MagicMock, patch
+
         from midison.ableton import AbletonSessionState
 
         mock_client = MagicMock()
