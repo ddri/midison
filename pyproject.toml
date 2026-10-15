@@ -34,3 +34,10 @@ packages = ["src/midison"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+
+[tool.ruff.lint]
+ignore = [
+    "BLE001",  # Catching Exception in top-level CLI error reporting and socket/stream fallback
+    "TRY004",  # User-facing payload validation raises ValueError
+]
+
