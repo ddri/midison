@@ -110,6 +110,6 @@ def build_candidates(
         chord = build_chord(
             dataclasses.replace(parsed, inversion=inv), key_pc, mode, octave=octave,
         )
-        voiced = apply_voicing(list(chord.midi_notes), voicing)
+        voiced = apply_voicing(list(chord.midi_notes), voicing, bass_pc=chord.bass_pc)
         candidates.append(voiced)
     return candidates

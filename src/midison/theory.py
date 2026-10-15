@@ -119,6 +119,10 @@ EXTENSION_TOKENS = ("maj13", "maj11", "maj9", "maj7", "13", "11", "9", "7")
 ALTERATION_PATTERN = re.compile(r"([b#])(5|9|11|13)")
 
 
+LETTER_CHORD_PATTERN = re.compile(r"^([A-G][b#]?)(.*)$")
+LETTER_TO_DEGREE = {"C": 1, "D": 2, "E": 3, "F": 4, "G": 5, "A": 6, "B": 7}
+
+
 @dataclass
 class ParsedNumeral:
     """A parsed Roman numeral, fully resolved against a key + mode."""
@@ -131,6 +135,18 @@ class ParsedNumeral:
     accidental: int                  # semitone offset on the root: -1 (b), 0, +1 (#)
     secondary_of: int | None = None  # if 'V/vi', this is 6 (the target degree)
     bass_degree: int | None = None   # for slash chords like 'I/3' or 'V/B'
+    bass_interval: int | None = None # 1, 3, 5, 7 for chord interval in bass
+    bass_pc: int | None = None       # explicit pitch class (0..11) for letter bass
+    bass_accidental: int = 0         # accidental on bass degree (e.g. b7)
+    root_pc: int | None = None       # explicit root pitch class (0..11) for letter chords
+
+    @property
+    def has_bass_override(self) -> bool:
+        return (
+            self.bass_degree is not None
+            or self.bass_interval is not None
+            or self.bass_pc is not None
+        )
 
 
 def parse_roman_numeral(raw: str) -> ParsedNumeral:
@@ -144,6 +160,8 @@ def parse_roman_numeral(raw: str) -> ParsedNumeral:
         bVII, bIII, #IV (modal mixture / chromatic roots)
         V/vi, V7/ii, viio7/V (secondary function)
         V6, V64, I6 (figured-bass inversion shorthand: 6 = first, 64 = second, 65/43/42 = seventh inversions)
+        Slash chord bass overrides: I/3, I/E, V/7, V/B, IV/5, IV/C, I/1, ii/1, IV/1
+        Letter chords: C/E, G/B, F/A, Dm/C
 
     The grammar is intentionally permissive but strict about ambiguity.
     """
@@ -151,63 +169,144 @@ def parse_roman_numeral(raw: str) -> ParsedNumeral:
     if not s:
         raise ValueError("Empty numeral")
 
-    # 1. Split off secondary function (everything after the LAST '/' that
-    #    isn't part of figured-bass shorthand).
+    # 1. Split off secondary function or bass slash override.
     secondary_of: int | None = None
+    bass_degree: int | None = None
+    bass_interval: int | None = None
+    bass_pc: int | None = None
+    bass_accidental: int = 0
+    slash_inversion: int | None = None
+
     if "/" in s:
         head, tail = s.rsplit("/", 1)
-        # Distinguish 'V/vi' (secondary) from 'I/3' (bass-note slash) from
-        # figured-bass like 'V64' (no slash anyway). If the tail looks like a
-        # numeral, treat as secondary; otherwise treat as bass-note slash.
-        if _looks_like_numeral(tail):
+        tail = tail.strip()
+        # Distinguish secondary function (e.g. 'V/vi', 'V/V', 'V7/ii')
+        # from bass overrides ('I/3', 'V/7', 'IV/5', 'I/1', 'ii/1', 'IV/1', 'I/E', 'C/E', etc.)
+        if _looks_like_numeral(tail) and tail.upper() not in ("I",):
             secondary_of = _numeral_to_degree(tail)
             s = head
-        # bass-note slashes (I/3, V/B) handled later as bass_degree
+        else:
+            s = head
+            tail_clean = tail
+            if tail_clean.startswith("b"):
+                tail_core = tail_clean[1:]
+                acc = -1
+            elif tail_clean.startswith("#"):
+                tail_core = tail_clean[1:]
+                acc = 1
+            else:
+                tail_core = tail_clean
+                acc = 0
 
-    # 2. Leading accidental on the root (b, #).
-    accidental = 0
-    if s.startswith("b"):
-        accidental = -1
-        s = s[1:]
-    elif s.startswith("#"):
-        accidental = 1
-        s = s[1:]
+            if tail_clean in NOTE_TO_PITCH_CLASS:
+                bass_pc = NOTE_TO_PITCH_CLASS[tail_clean]
+            elif tail_core.isdigit():
+                d = int(tail_core)
+                bass_accidental = acc
+                if d == 1:
+                    bass_degree = 1
+                    slash_inversion = 0
+                elif d == 3:
+                    bass_interval = 3
+                    bass_degree = 3
+                    slash_inversion = 1
+                elif d == 5:
+                    bass_interval = 5
+                    bass_degree = 5
+                    slash_inversion = 2
+                elif d == 7:
+                    bass_degree = 7
+                    # V/7 means leading tone in bass / first inversion seventh
+                    if head.upper().startswith("V"):
+                        slash_inversion = 1
+                    else:
+                        bass_interval = 7
+                        slash_inversion = 3
+                else:
+                    bass_degree = d
+            elif tail_clean.upper() in ("I",):
+                bass_degree = 1
+                slash_inversion = 0
+            else:
+                raise ValueError(f"Unknown bass override {tail!r} in numeral {raw!r}")
 
-    # 3. The numeral itself: longest match from {VII, VI, IV, V, III, II, I},
-    #    case-sensitive.
-    numeral_match = re.match(r"(VII|VI|IV|V|III|II|I|vii|vi|iv|v|iii|ii|i)", s)
-    if not numeral_match:
-        raise ValueError(f"Could not find Roman numeral in {raw!r}")
-    numeral = numeral_match.group(1)
-    s = s[numeral_match.end():]
-    degree = ROMAN_TO_DEGREE[numeral.upper()]
-    is_uppercase = numeral.isupper()
+    # Check for letter chord root (e.g. C, Dm, G, F, Bb, F#m, etc.)
+    letter_match = None
+    if re.match(r"^[A-G]", s):
+        letter_match = LETTER_CHORD_PATTERN.match(s)
 
-    # 4. Quality marker immediately after numeral: o, °, +, or lowercase 'm'.
-    quality_override: str | None = None
-    if s.startswith(("o", "°")):
-        quality_override = QUALITY_DIMINISHED
-        s = s[1:]
-    elif s.startswith("ø"):
-        # Half-diminished. Treated as diminished triad with a minor 7 added.
-        # We mark quality as 'd' and force a m7 extension below.
-        quality_override = QUALITY_DIMINISHED
-        s = s[1:]
-        # Inject '7' so the seventh gets added.
-        s = "7" + s
-    elif s.startswith("+"):
-        quality_override = QUALITY_AUGMENTED
-        s = s[1:]
-    elif s.startswith("m") and not s.startswith("maj"):
-        # Lowercase 'm' on a minor numeral is redundant; on an uppercase
-        # numeral (e.g. 'IVm') it forces minor.
-        quality_override = QUALITY_MINOR
-        s = s[1:]
+    if letter_match:
+        root_name = letter_match.group(1)
+        s = letter_match.group(2)
+        root_pc = parse_pitch_class(root_name)
+        degree = LETTER_TO_DEGREE[root_name[0]]
+        accidental = 0
+        is_uppercase = True
 
-    if quality_override is not None:
-        quality = quality_override
+        # Quality marker immediately after root note
+        quality_override: str | None = None
+        if s.startswith(("o", "°")):
+            quality_override = QUALITY_DIMINISHED
+            s = s[1:]
+        elif s.startswith("dim"):
+            quality_override = QUALITY_DIMINISHED
+            s = s[3:]
+        elif s.startswith("ø"):
+            quality_override = QUALITY_DIMINISHED
+            s = "7" + s[1:]
+        elif s.startswith("+"):
+            quality_override = QUALITY_AUGMENTED
+            s = s[1:]
+        elif s.startswith("aug"):
+            quality_override = QUALITY_AUGMENTED
+            s = s[3:]
+        elif s.startswith("m") and not s.startswith("maj"):
+            quality_override = QUALITY_MINOR
+            s = s[1:]
+
+        quality = quality_override if quality_override is not None else QUALITY_MAJOR
     else:
-        quality = QUALITY_MAJOR if is_uppercase else QUALITY_MINOR
+        root_pc = None
+        # 2. Leading accidental on the root (b, #).
+        accidental = 0
+        if s.startswith("b"):
+            accidental = -1
+            s = s[1:]
+        elif s.startswith("#"):
+            accidental = 1
+            s = s[1:]
+
+        # 3. The numeral itself: longest match from {VII, VI, IV, V, III, II, I}, case-sensitive.
+        numeral_match = re.match(r"(VII|VI|IV|V|III|II|I|vii|vi|iv|v|iii|ii|i)", s)
+        if not numeral_match:
+            raise ValueError(f"Could not find Roman numeral in {raw!r}")
+        numeral = numeral_match.group(1)
+        s = s[numeral_match.end():]
+        degree = ROMAN_TO_DEGREE[numeral.upper()]
+        is_uppercase = numeral.isupper()
+
+        # 4. Quality marker immediately after numeral: o, °, +, or lowercase 'm'.
+        quality_override = None
+        if s.startswith(("o", "°")):
+            quality_override = QUALITY_DIMINISHED
+            s = s[1:]
+        elif s.startswith("dim"):
+            quality_override = QUALITY_DIMINISHED
+            s = s[3:]
+        elif s.startswith("ø"):
+            quality_override = QUALITY_DIMINISHED
+            s = "7" + s[1:]
+        elif s.startswith("+"):
+            quality_override = QUALITY_AUGMENTED
+            s = s[1:]
+        elif s.startswith("m") and not s.startswith("maj"):
+            quality_override = QUALITY_MINOR
+            s = s[1:]
+
+        if quality_override is not None:
+            quality = quality_override
+        else:
+            quality = QUALITY_MAJOR if is_uppercase else QUALITY_MINOR
 
     # 5. Extensions (maj7, 7, 9, 11, 13, etc).
     extensions: list[int] = []
@@ -216,17 +315,13 @@ def parse_roman_numeral(raw: str) -> ParsedNumeral:
         for tok in EXTENSION_TOKENS:
             if s.startswith(tok):
                 if tok.startswith("maj"):
-                    # maj7 forces a major 7th regardless of triad quality.
                     n = int(tok[3:])
                     extensions.append(n)
-                    # Imply lower extensions: 9 implies 7, 11 implies 7+9, etc.
                     for implied in (7, 9, 11):
                         if implied < n and implied not in extensions:
                             extensions.append(implied)
-                    # Mark as major-7 explicitly via a sentinel alteration.
                     s = s[len(tok):]
                     matched = True
-                    # Track that the 7 should be major (handled in builder).
                     extensions.append(-7)  # sentinel: maj7
                     break
                 else:
@@ -248,16 +343,13 @@ def parse_roman_numeral(raw: str) -> ParsedNumeral:
     s = ALTERATION_PATTERN.sub("", s)
 
     # 7. Figured-bass inversion shorthand or explicit bass-note slash.
-    inversion = 0
-    bass_degree: int | None = None
+    inversion = slash_inversion if slash_inversion is not None else 0
     s = s.strip()
     if s in ("6", "63"):
         inversion = 1
     elif s in ("64",):
         inversion = 2
     elif s in ("7", "65"):
-        # '7' alone was already consumed as an extension above; '65' here
-        # means first inversion of a seventh chord.
         if s == "65":
             inversion = 1
     elif s == "43":
@@ -265,9 +357,21 @@ def parse_roman_numeral(raw: str) -> ParsedNumeral:
     elif s == "42" or s == "2":
         inversion = 3
     elif s:
-        # Unparsed remainder — could be a bass-note slash (handled earlier)
-        # or genuinely unknown. We tolerate empty; otherwise raise.
         raise ValueError(f"Unparsed remainder {s!r} in numeral {raw!r}")
+
+    # If bass_pc is given and slash_inversion was not explicitly set:
+    if slash_inversion is None and bass_pc is not None and root_pc is not None:
+        third_pc = (root_pc + (3 if quality in (QUALITY_MINOR, QUALITY_DIMINISHED) else 4)) % 12
+        fifth_pc = (root_pc + (6 if quality == QUALITY_DIMINISHED else 8 if quality == QUALITY_AUGMENTED else 7)) % 12
+        seventh_pc = (root_pc + (11 if -7 in extensions else 10)) % 12
+        if bass_pc == third_pc:
+            inversion = 1
+        elif bass_pc == fifth_pc:
+            inversion = 2
+        elif 7 in extensions and bass_pc == seventh_pc:
+            inversion = 3
+        elif bass_pc == root_pc:
+            inversion = 0
 
     # Dedupe + sort extensions, keeping the maj7 sentinel if present.
     has_maj7 = -7 in extensions
@@ -285,6 +389,10 @@ def parse_roman_numeral(raw: str) -> ParsedNumeral:
         accidental=accidental,
         secondary_of=secondary_of,
         bass_degree=bass_degree,
+        bass_interval=bass_interval,
+        bass_pc=bass_pc,
+        bass_accidental=bass_accidental,
+        root_pc=root_pc,
     )
 
 
@@ -316,6 +424,7 @@ class ResolvedChord:
     pitch_classes: tuple[int, ...]   # in chord-tone order: root, 3rd, 5th, ...
     midi_notes: tuple[int, ...]      # voiced in a specific octave
     inversion: int = 0
+    bass_pc: int | None = None
 
 
 # Triad interval signatures from the root, in semitones.
@@ -337,23 +446,21 @@ def build_chord(
     Build a chord's pitch classes and a default close-position voicing.
 
     The voicing returned here is the raw 'stack of thirds' starting at the
-    given octave, with inversion applied. Voicing transformations
-    (drop2, rootless, etc.) are applied in voicings.py.
+    given octave, with inversion or slash chord bass override applied.
+    Voicing transformations (drop2, rootless, etc.) are applied in voicings.py.
     """
-    # Resolve the root pitch class. For a secondary function 'V/vi', the
-    # 'vi' establishes a temporary tonic, and the 'V' is built off that
-    # temporary tonic's dominant.
-    if parsed.secondary_of is not None:
+    # Resolve the root pitch class.
+    if parsed.root_pc is not None:
+        root_pc = parsed.root_pc
+    elif parsed.secondary_of is not None:
         target_scale = scale_pitch_classes(key_pc, mode)
         temp_tonic_pc = target_scale[parsed.secondary_of - 1]
-        # Secondary chords are conventionally built from the major scale of
-        # the temporary tonic.
         root_pc = scale_pitch_classes(temp_tonic_pc, "major")[parsed.degree - 1]
+        root_pc = (root_pc + parsed.accidental) % 12
     else:
         scale = scale_pitch_classes(key_pc, mode)
         root_pc = scale[parsed.degree - 1]
-
-    root_pc = (root_pc + parsed.accidental) % 12
+        root_pc = (root_pc + parsed.accidental) % 12
 
     # Build the triad.
     intervals = list(TRIAD_INTERVALS[parsed.quality])
@@ -400,8 +507,65 @@ def build_chord(
     root_midi = (octave + 1) * 12 + root_pc
     midi_notes = tuple(root_midi + iv for iv in intervals)
 
-    # Apply inversion by rotating the lowest note(s) up an octave.
-    if parsed.inversion > 0:
+    # Determine target bass pitch class if an explicit bass override exists
+    target_bass_pc: int | None = None
+    if parsed.bass_pc is not None:
+        target_bass_pc = parsed.bass_pc % 12
+    elif parsed.bass_interval is not None:
+        if parsed.bass_interval == 1:
+            target_bass_pc = root_pc
+        elif parsed.bass_interval == 3:
+            third_ivs = [iv for iv in intervals if 2 <= iv <= 5]
+            target_bass_pc = (root_pc + (third_ivs[0] if third_ivs else 4)) % 12
+        elif parsed.bass_interval == 5:
+            fifth_ivs = [iv for iv in intervals if 6 <= iv <= 8]
+            target_bass_pc = (root_pc + (fifth_ivs[0] if fifth_ivs else 7)) % 12
+        elif parsed.bass_interval == 7:
+            seventh_ivs = [iv for iv in intervals if 9 <= iv <= 11]
+            target_bass_pc = (root_pc + (seventh_ivs[0] if seventh_ivs else 10)) % 12
+    elif parsed.bass_degree is not None:
+        scale = scale_pitch_classes(key_pc, mode)
+        target_bass_pc = (scale[parsed.bass_degree - 1] + parsed.bass_accidental) % 12
+
+    inversion = parsed.inversion
+
+    # Apply bass override or inversion
+    if target_bass_pc is not None:
+        # Determine inversion based on target_bass_pc
+        if target_bass_pc == root_pc:
+            inversion = 0
+        elif target_bass_pc in [(root_pc + iv) % 12 for iv in intervals if 2 <= iv <= 5]:
+            inversion = 1
+        elif target_bass_pc in [(root_pc + iv) % 12 for iv in intervals if 6 <= iv <= 8]:
+            inversion = 2
+        elif target_bass_pc in [(root_pc + iv) % 12 for iv in intervals if 9 <= iv <= 11]:
+            inversion = 3
+
+        notes = list(midi_notes)
+        if target_bass_pc in [n % 12 for n in notes]:
+            count = 0
+            while notes[0] % 12 != target_bass_pc and count < len(notes):
+                lowest = notes.pop(0)
+                notes.append(lowest + 12)
+                notes.sort()
+                count += 1
+            octave_base = (octave + 1) * 12
+            while notes[0] >= octave_base + 12:
+                notes = [n - 12 for n in notes]
+            while notes[0] < octave_base - 12:
+                notes = [n + 12 for n in notes]
+        else:
+            # Pedal point: note not in chord (e.g. ii/1 where C is not in Dm)
+            lowest = notes[0]
+            bass_note = lowest - ((lowest - target_bass_pc) % 12)
+            if bass_note == lowest:
+                bass_note -= 12
+            while bass_note >= lowest:
+                bass_note -= 12
+            notes.insert(0, bass_note)
+            notes.sort()
+        midi_notes = tuple(notes)
+    elif parsed.inversion > 0:
         notes = list(midi_notes)
         for _ in range(min(parsed.inversion, len(notes) - 1)):
             notes[0] += 12
@@ -409,6 +573,8 @@ def build_chord(
         midi_notes = tuple(notes)
 
     pitch_classes = tuple((root_pc + iv) % 12 for iv in intervals)
+    if target_bass_pc is not None and target_bass_pc not in pitch_classes:
+        pitch_classes = (target_bass_pc,) + pitch_classes
 
     return ResolvedChord(
         numeral=parsed.raw,
@@ -416,5 +582,6 @@ def build_chord(
         quality=parsed.quality,
         pitch_classes=pitch_classes,
         midi_notes=midi_notes,
-        inversion=parsed.inversion,
+        inversion=inversion,
+        bass_pc=target_bass_pc,
     )

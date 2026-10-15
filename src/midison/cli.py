@@ -265,6 +265,29 @@ def build_parser() -> argparse.ArgumentParser:
         help="Install Midison Generator.amxd into Ableton Live 12 MIDI Tools",
     )
     parser.add_argument(
+        "--suggest",
+        action="store_true",
+        help="Harmonic Navigator: suggest musically compelling next chords from current progression",
+    )
+    parser.add_argument(
+        "--vibe",
+        help="Generate progression from an emotional or genre vibe (e.g. 'melancholy_city_pop', 'dreamy_lofi_nostalgia')",
+    )
+    parser.add_argument(
+        "--list-vibes",
+        action="store_true",
+        help="List all available emotional and genre vibes",
+    )
+    parser.add_argument(
+        "--song",
+        help="Generate a multi-section song arrangement by template ID (e.g. 'neo_soul', 'pop_anthem', 'city_pop')",
+    )
+    parser.add_argument(
+        "--list-songs",
+        action="store_true",
+        help="List all available multi-section song templates",
+    )
+    parser.add_argument(
         "-f",
         "--filename",
         help="Output filename without .mid extension",
@@ -273,8 +296,22 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    raw_args = list(argv if argv is not None else sys.argv[1:])
+    # Support positional subcommands seamlessly:
+    # midison suggest "ii7 - V7" -> midison "ii7 - V7" --suggest
+    # midison song neo_soul -> midison --song neo_soul
+    # midison vibe melancholy_city_pop -> midison --vibe melancholy_city_pop
+    if raw_args:
+        subcmd = raw_args[0].lower()
+        if subcmd == "suggest":
+            raw_args = raw_args[1:] + ["--suggest"]
+        elif subcmd == "song":
+            raw_args = ["--song"] + raw_args[1:]
+        elif subcmd == "vibe":
+            raw_args = ["--vibe"] + raw_args[1:]
+
     parser = build_parser()
-    args = parser.parse_args(argv)
+    args = parser.parse_args(raw_args)
 
     if args.install_ableton_osc:
         try:
@@ -303,6 +340,119 @@ def main(argv: list[str] | None = None) -> int:
         except Exception as e:
             print(f"Error installing Max for Live MIDI tool: {e}", file=sys.stderr)
             return 1
+
+    if args.list_vibes:
+        from midison.vibes import list_all_vibes
+        vibes = list_all_vibes()
+        print("\n✨ Available Midison Emotion & Genre Vibes:")
+        for v in vibes:
+            tags = ", ".join(v.mood_tags)
+            print(f"\n  • {v.title} [{v.vibe_id}]")
+            print(f"    Mood:        {tags}")
+            print(f"    Progression: {v.progression}")
+            print(f"    Context:     {v.harmonic_context}")
+            print(f"    Suggested:   {v.suggested_key} {v.suggested_scale} @ {v.suggested_bpm} BPM | Voicing: {v.suggested_voicing} | Groove: {v.suggested_groove}")
+        print()
+        return 0
+
+    if args.list_songs:
+        from midison.song import list_song_templates
+        templates = list_song_templates()
+        print("\n🎵 Available Midison Multi-Section Song Templates:")
+        for t in templates:
+            print(f"\n  • {t.name} [{t.template_id}] - {t.recommended_bpm} BPM ({t.recommended_key} {t.recommended_scale})")
+            print(f"    {t.description}")
+            for sec in t.sections:
+                print(f"      - {sec.name.replace('_', ' ').title():<12} {sec.progression} ({sec.voicing}, {sec.pattern})")
+        print()
+        return 0
+
+    if args.song:
+        from midison.song import generate_song_arrangement, inject_song_into_ableton
+        output_dir = args.output_dir or config.get_output_directory()
+        try:
+            custom_key = args.key if any(k in raw_args for k in ("-k", "--key")) else None
+            custom_mode = args.scale_type if any(m in raw_args for m in ("-m", "--mode")) else None
+            arrangement = generate_song_arrangement(
+                template_id=args.song,
+                key_center=custom_key,
+                scale_type=custom_mode,
+                bpm=args.bpm,
+                output_dir=output_dir,
+            )
+        except Exception as e:
+            print(f"Error generating song arrangement: {e}", file=sys.stderr)
+            return 1
+
+        print(f"\n🎵 Generated Song Arrangement: {arrangement.template.name}")
+        print(f"  Key: {arrangement.key_center} {arrangement.scale_type} | Tempo: {arrangement.bpm} BPM | Total Beats: {arrangement.total_beats:.1f}\n")
+        for sec in arrangement.sections:
+            plan = sec.section_plan
+            print(f"  • {plan.name.replace('_', ' ').title():<12} {plan.progression}")
+            print(f"    Notes: {sec.notes_count} | Beats: {sec.total_beats:.1f} | Voicing: {plan.voicing} | Groove: {plan.pattern}")
+            if sec.midi_path:
+                print(f"    MIDI:  {sec.midi_path}")
+
+        if args.to_ableton:
+            client = AbletonClient()
+            track_idx = args.track if args.track is not None else 0
+            try:
+                injected = inject_song_into_ableton(arrangement, client=client, track_index=track_idx)
+                print(f"\n✓ Injected {len(injected)} sections directly into Ableton Live on Track {track_idx + 1}:")
+                for s in injected:
+                    print(f"  Scene {s['scene_index'] + 1} ({s['section_name'].title()}): {s['notes_count']} notes, {s['total_beats']:.1f} beats")
+            except Exception as e:
+                print(f"Error injecting song into Ableton Live: {e}", file=sys.stderr)
+                return 1
+        print()
+        return 0
+
+    if args.suggest:
+        if not args.progression:
+            print("Error: Progression required to suggest next chords. E.g. midison 'ii7 - V7' --suggest", file=sys.stderr)
+            return 1
+        from midison.suggest import suggest_next_chords
+        try:
+            suggestions = suggest_next_chords(args.progression, key_center=args.key, scale_type=args.scale_type)
+        except Exception as e:
+            print(f"Error analyzing progression: {e}", file=sys.stderr)
+            return 1
+
+        print(f"\n🧭 Harmonic Navigator: Next Chord Suggestions for '{args.progression}' ({args.key} {args.scale_type}):\n")
+        header = f"  {'#':<3} {'Numeral':<10} {'Chord':<8} {'Pathway':<20} {'Mood':<26} {'Explanation'}"
+        print(header)
+        print("  " + "-" * 105)
+        for i, s in enumerate(suggestions, 1):
+            print(f"  {i:<3} {s.numeral:<10} {s.chord_name:<8} {s.pathway:<20} {s.mood_descriptor:<26} {s.explanation}")
+        print()
+        return 0
+
+    if args.vibe:
+        from midison.vibes import find_vibes, get_vibe
+        try:
+            vibe_obj = get_vibe(args.vibe)
+        except Exception:
+            matches = find_vibes(args.vibe)
+            if not matches:
+                print(f"Error: No vibe matching '{args.vibe}' found. Use --list-vibes to see options.", file=sys.stderr)
+                return 1
+            vibe_obj = matches[0]
+
+        print(f"\n✨ Applying Vibe: {vibe_obj.title} ({vibe_obj.harmonic_context})")
+        if not args.progression:
+            args.progression = vibe_obj.progression
+        if not any(k in raw_args for k in ("-k", "--key")):
+            args.key = vibe_obj.suggested_key
+        if not any(m in raw_args for m in ("-m", "--mode")):
+            args.scale_type = vibe_obj.suggested_scale
+        if args.bpm is None:
+            args.bpm = vibe_obj.suggested_bpm
+        if not any(v in raw_args for v in ("-v", "--voicing")):
+            args.voicing = vibe_obj.suggested_voicing
+        if not any(p in raw_args for p in ("-p", "--pattern")):
+            args.pattern = vibe_obj.suggested_groove
+        if not any(o in raw_args for o in ("-o", "--octave")):
+            args.octave = vibe_obj.suggested_octave
 
     if not args.progression:
         parser.print_help()

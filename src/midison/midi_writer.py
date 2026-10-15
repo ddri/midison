@@ -95,7 +95,11 @@ def generate(request: GenerationRequest, output_dir: Path) -> GenerationResult:
         # Track explicitness BEFORE overriding so voice leading respects user intent.
         # spec.inversion=0 counts as explicit (user named root deliberately, per MCP
         # schema "omit this" guidance); only None means "implicit, optimizer free to pick".
-        explicit_inversion = parsed.inversion > 0 or spec.inversion is not None
+        explicit_inversion = (
+            parsed.inversion > 0
+            or spec.inversion is not None
+            or parsed.has_bass_override
+        )
         if spec.inversion is not None:
             parsed.inversion = spec.inversion
         chord = build_chord(parsed, key_pc, request.scale_type, octave=request.octave)
@@ -112,11 +116,11 @@ def generate(request: GenerationRequest, output_dir: Path) -> GenerationResult:
             # build_candidates did not mutate).
             parsed.inversion = chosen_inv
         else:
-            voiced = apply_voicing(list(chord.midi_notes), spec.voicing)
+            voiced = apply_voicing(list(chord.midi_notes), spec.voicing, bass_pc=chord.bass_pc)
 
         # Step 3: rootless — strip root after voice leading so VL sees the full chord
         if spec.rootless:
-            voiced = apply_voicing(voiced, "rootless")
+            voiced = apply_voicing(voiced, "rootless", bass_pc=chord.bass_pc)
 
         # Step 4: max_octave clamp — hard ceiling applied last
         voiced = _clamp_to_max_octave(voiced, request.max_octave)

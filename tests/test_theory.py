@@ -290,3 +290,18 @@ class TestChordBuilding:
         chord = build_chord(p, key_pc=0, mode="major", octave=4)
         # Lowest note should now be E, not C.
         assert chord.midi_notes[0] % 12 == 4  # E
+
+    def test_slash_chord_inversions(self):
+        """I7/3 puts the 3rd in the bass (1st inversion), I/5 puts 5th in the bass (2nd inversion)."""
+        p1 = parse_roman_numeral("I7/3")
+        assert p1.inversion == 1
+        assert p1.bass_degree == 3
+        chord1 = build_chord(p1, key_pc=0, mode="major", octave=4)
+        assert chord1.midi_notes[0] % 12 == 4  # E
+
+        p2 = parse_roman_numeral("I/5")
+        assert p2.inversion == 2
+        assert p2.bass_degree == 5
+        chord2 = build_chord(p2, key_pc=0, mode="major", octave=4)
+        assert chord2.midi_notes[0] % 12 == 7  # G
+

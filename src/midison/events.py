@@ -80,7 +80,11 @@ def resolve_progression_notes(request: GenerationRequest) -> ResolvedProgression
 
     for spec in request.chords:
         parsed = parse_roman_numeral(spec.numeral)
-        explicit_inversion = parsed.inversion > 0 or spec.inversion is not None
+        explicit_inversion = (
+            parsed.inversion > 0
+            or spec.inversion is not None
+            or parsed.has_bass_override
+        )
         if spec.inversion is not None:
             parsed.inversion = spec.inversion
         chord = build_chord(parsed, key_pc, request.scale_type, octave=request.octave)
@@ -97,10 +101,10 @@ def resolve_progression_notes(request: GenerationRequest) -> ResolvedProgression
             chosen_inv, voiced = choose_voicing_position(candidates, previous_voiced)
             parsed.inversion = chosen_inv
         else:
-            voiced = apply_voicing(list(chord.midi_notes), spec.voicing)
+            voiced = apply_voicing(list(chord.midi_notes), spec.voicing, bass_pc=chord.bass_pc)
 
         if spec.rootless:
-            voiced = apply_voicing(voiced, "rootless")
+            voiced = apply_voicing(voiced, "rootless", bass_pc=chord.bass_pc)
 
         voiced = _clamp_to_max_octave(voiced, request.max_octave)
         resolved_chords.append((spec, parsed, chord, voiced))

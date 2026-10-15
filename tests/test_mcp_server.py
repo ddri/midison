@@ -236,6 +236,9 @@ def test_list_tools_returns_all_tools():
         "send_to_ableton",
         "stream_to_midi_port",
         "install_ableton_integrations",
+        "suggest_next_chord",
+        "generate_song_structure",
+        "list_vibes",
     }
     # Schemas are non-trivial.
     schemas = {t.name: t.inputSchema for t in tools}
@@ -513,4 +516,57 @@ def test_handle_install_ableton_integrations(tmp_path):
     assert res["status"] == "success"
     assert "ableton_osc" in res["installed_paths"]
     assert "max_generator" in res["installed_paths"]
+
+
+def test_list_tools_includes_songwriting_tools():
+    tools = asyncio.run(mcp_server.list_tools())
+    tool_names = {t.name for t in tools}
+    assert "suggest_next_chord" in tool_names
+    assert "generate_song_structure" in tool_names
+    assert "list_vibes" in tool_names
+
+
+def test_handle_suggest_next_chord():
+    res = mcp_server.handle_suggest_next_chord({
+        "current_progression": "ii7 - V7",
+        "key_center": "C",
+        "scale_type": "major",
+    })
+    assert res["status"] == "success"
+    assert len(res["suggestions"]) >= 4
+    numerals = [s["numeral"] for s in res["suggestions"]]
+    assert "Imaj7" in numerals
+
+
+def test_handle_generate_song_structure(isolated_config_dir, tmp_path):
+    config.set_output_directory(tmp_path / "out")
+    res = mcp_server.handle_generate_song_structure({
+        "template_id": "city_pop",
+        "bpm": 118,
+    })
+    assert res["status"] == "success"
+    assert res["template_id"] == "city_pop"
+    assert len(res["sections"]) == 4
+    assert res["bpm"] == 118
+
+
+def test_handle_list_vibes():
+    res_all = mcp_server.handle_list_vibes({})
+    assert res_all["status"] == "success"
+    assert res_all["count"] >= 10
+
+    res_filtered = mcp_server.handle_list_vibes({"query": "city pop"})
+    assert res_filtered["status"] == "success"
+    assert any(v["vibe_id"] == "melancholy_city_pop" for v in res_filtered["vibes"])
+
+
+def test_handle_generate_midi_progression_with_vibe(isolated_config_dir, tmp_path):
+    config.set_output_directory(tmp_path / "out")
+    res = mcp_server.handle_generate_midi_progression({
+        "vibe": "melancholy_city_pop",
+    })
+    assert "filepath" in res
+    assert Path(res["filepath"]).exists()
+    assert len(res["resolved"]) == 4
+
 

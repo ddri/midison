@@ -21,15 +21,33 @@ uv pip install -e ".[dev]"
 uv run pytest
 ```
 
-187 tests covering the parser, chord builder, voicings, voice leading, grooves, virtual MIDI streaming, AbletonOSC injection, Live 12 MIDI Tools, MIDI writer, config, CLI, and MCP server.
+280 tests covering the parser, slash chords, chord builder, voicings, voice leading, grooves, harmonic suggestions, multi-section song architectures, vibes, virtual MIDI streaming, AbletonOSC injection, Live 12 MIDI Tools, MIDI writer, config, CLI, and MCP server.
 
 ## Command-line interface
 
-Render progressions directly to MIDI files, stream them live into your DAW, or inject clips directly:
+Render progressions directly to MIDI files, navigate harmonic next chords, build multi-section songs, stream them live into your DAW, or inject clips directly:
 
 ```bash
 # Basic progression (C major, 120 BPM, 4 beats per chord)
 midison "ii7 - V7 - Imaj7"
+
+# Harmonic Navigator: recommend next chords from a progression
+midison suggest "ii7 - V7" -k C
+
+# Emotion & Genre Vibe translation: generate from a musical vibe or mood
+midison vibe melancholy_city_pop
+midison --list-vibes
+
+# Multi-Section Song Architecture: generate Verse, Pre-Chorus, Chorus, Bridge
+midison song city_pop
+midison song neo_soul --to-ableton  # Injects Scenes 0..3 directly into Ableton!
+midison --list-songs
+
+# Slash chords & stepwise descending basslines
+midison "I - V/7 - vi - I/5 - IV - I/3 - ii7 - V7" -k C --voice-lead
+
+# Pedal points (chord over tonic bass)
+midison "I - IV/1 - I - V/1 - I" -k C
 
 # Stream live into your armed Ableton synth via virtual MIDI port 'Midison'
 midison "ii7 - V7 - Imaj7" -k Eb -v drop2 -p bossa --play
@@ -110,11 +128,14 @@ midison-corpus --output-dir ~/Music/midison-test
 }
 ```
 
-Restart your MCP host after configuring. The six tools will appear.
+Restart your MCP host after configuring. The nine tools will appear.
 
 ### Tools
 
-* **`generate_midi_progression`**: Generates a `.mid` file and `.md` sidecar from a Roman numeral progression.
+* **`generate_midi_progression`**: Generates a `.mid` file and `.md` sidecar from a Roman numeral progression or an emotional vibe.
+* **`suggest_next_chord`**: Harmonic Navigator: suggests 4-6 musically compelling next chords across 5 pathways (diatonic, secondary dominants, modal mixture, tritone substitution, chromatic passing) with explanations.
+* **`generate_song_structure`**: Generates a complete multi-section song arrangement (Verse, Pre-Chorus, Chorus, Bridge) from curated templates, with optional scene injection into Ableton Live.
+* **`list_vibes`**: Explores and searches the Emotion & Genre Vibe catalog (City Pop, Lofi, Neo-Soul, Dark Cinematic, Gospel, etc.).
 * **`get_ableton_session_state`**: Queries active Ableton Live session tempo, time signature, selected track, and clip slot.
 * **`send_to_ableton`**: Directly injects a progression into an active Ableton Live track and clip slot via AbletonOSC (zero drag-and-drop).
 * **`stream_to_midi_port`**: Streams notes in real-time to a macOS CoreMIDI virtual port (`"Midison"`) to audition through armed VST instruments live.
@@ -233,10 +254,13 @@ tail -f /tmp/midison-mcp.log
 - **Triad qualities:** `I` (major), `i` (minor), `vii°` / `viio` (diminished), `III+` (augmented)
 - **Extensions:** `7`, `maj7`, `9`, `11`, `13`, `maj9`, `maj13`
 - **Alterations:** `b5`, `#5`, `b9`, `#9`, `#11`, `b13`
-- **Chromatic roots / modal mixture:** `bVII`, `bIII`, `bVI`, `bII`, `#IV`
-- **Secondary dominants:** `V/vi`, `V7/ii`, `vii°/V`
-- **Half-diminished:** `iiø`
-- **Inversions:** `V6` (first), `V64` (second), `V42` (third of seventh chord)
+- **Chromatic roots / modal mixture:** `bVII`, `bIII`, `bVI`, `bII`, `#IV`, `#iv°7`, `#IVdim7`
+- **Secondary dominants:** `V/vi`, `V7/ii`, `V7/V`, `vii°/V`
+- **Slash chords & inversions:** `I/3` or `I/E` (first inversion), `V/7` or `V/B` (leading tone bass), `IV/5` or `IV/C` (second inversion)
+- **Pedal points:** `IV/1` or `ii/1` (subdominant over tonic bass pedal)
+- **Lead-sheet notation:** `C/E`, `G/B`, `F/A`, `Dm/C`
+- **Half-diminished:** `iiø`, `iiø7`, `viiø7`
+- **Figured-bass inversions:** `V6` (first), `V64` (second), `V42` (third of seventh chord)
 
 Supported modes: major, minor, dorian, phrygian, lydian, mixolydian, locrian, harmonic_minor, melodic_minor, phrygian_dominant, lydian_dominant, altered.
 
@@ -244,7 +268,10 @@ Supported modes: major, minor, dorian, phrygian, lydian, mixolydian, locrian, ha
 
 ```
 src/midison/
-├── theory.py         # Roman numeral parser, modes, chord builder
+├── theory.py         # Roman numeral parser, modes, slash chords, chord builder
+├── suggest.py        # Harmonic Navigator & next chord recommender
+├── song.py           # Multi-section song architecture & Ableton scene sync
+├── vibes.py          # Emotion & genre vibe translation engine
 ├── voicings.py       # Voicing transformations (close, drop2, drop3, drop2and4, spread)
 ├── voice_leading.py  # Inversion + register optimisation
 ├── grooves.py        # Comping grooves and performance pattern engine
@@ -254,7 +281,7 @@ src/midison/
 ├── miditool.py       # Ableton Live 12 native dictionary formatter and AMXD builder
 ├── midi_writer.py    # MIDI output, sidecar generation, generation pipeline
 ├── cli.py            # Standalone one-shot CLI generator and installer
-├── mcp_server.py     # MCP stdio server with 5 production tools
+├── mcp_server.py     # MCP stdio server with 9 production tools
 ├── corpus.py         # Audition corpus CLI
 └── config.py         # Persistent config (~/.midison/config.json)
 ```

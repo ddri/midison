@@ -87,11 +87,22 @@ var PRESETS = [
     "I - V - vi - IV",
     "i7 - iv7 - v7 - i7",
     "ii9 - V13 - Imaj9",
-    "Imaj9 - IVmaj7",
-    "i9 - IV9",
-    "iiø7 - V7b9 - i",
     "I - bVII - IV - I",
-    "Imaj7 - V7/vi - vi7 - ii7"
+    "[Verse] IVmaj7 - V7 - iii7 - vi7",
+    "[Verse] Imaj9 - iv9",
+    "[Pre] ii7 - V7 - Imaj7 - I7",
+    "[Pre] IVmaj9 - iii7 - ii9 - V7b9",
+    "[Chorus] Imaj9 - V7/vi - vi7 - ii9 - V13",
+    "[Chorus] IV - I - V - vi",
+    "[Bridge] iiø7 - V7b9 - i7 - iv7",
+    "[Bridge] bVImaj7 - bVII7 - Imaj7",
+    "[Vibe] City Pop: IVmaj7 - V7 - iii7 - vi",
+    "[Vibe] Dreamy Lofi: Imaj9 - iv9",
+    "[Vibe] Dark Tension: i - bII - vii°7 - i",
+    "[Vibe] Neo-Soul: ii9 - V13 - Imaj9",
+    "[Vibe] Gospel Uplift: I - I7/3 - IV - iv - I/5 - V7 - I",
+    "[Vibe] Dark R&B: i7 - iv7 - bVImaj7 - V7b9",
+    "[Vibe] Dorian Funk: i9 - IV9"
 ];
 
 var VOICINGS = ["Close", "Drop 2", "Drop 3", "Drop 2&4", "Spread"];
@@ -116,9 +127,22 @@ var romanDegrees = {
     "i": 0, "ii": 1, "iii": 2, "iv": 3, "v": 4, "vi": 5, "vii": 6
 };
 
+function cleanProgression(str) {
+    if (!str) return "I";
+    var s = ("" + str).trim();
+    if (s.indexOf(":") !== -1 && s.indexOf("[") !== -1) {
+        var colonIdx = s.indexOf(":");
+        s = s.substring(colonIdx + 1);
+    } else if (s.indexOf("]") !== -1) {
+        var closeIdx = s.indexOf("]");
+        s = s.substring(closeIdx + 1);
+    }
+    return s.trim();
+}
+
 function splitProgression(str) {
-    if (!str) return ["I"];
-    var cleaned = str.replace(/[–—]/g, "-").trim();
+    var cleaned = cleanProgression(str).replace(/[–—]/g, "-").trim();
+    if (!cleaned) return ["I"];
     var parts = cleaned.split(/\s*,\s*|\s+-\s+|\s+/);
     var tokens = [];
     for (var i = 0; i < parts.length; i++) {
@@ -139,11 +163,23 @@ function parseChordToken(tok, rootPc, scaleIntervals) {
     }
 
     var targetDeg = null;
+    var bassOverridePc = null;
     if (raw.indexOf("/") !== -1) {
         var slashParts = raw.split("/");
         raw = slashParts[0];
-        var targetStr = slashParts[1].toLowerCase().replace(/[^a-z]/g, "");
-        targetDeg = romanDegrees[targetStr];
+        var denom = slashParts[1].toLowerCase().replace(/[^a-z0-9#b]/g, "");
+        if (romanDegrees[denom] !== undefined) {
+            targetDeg = romanDegrees[denom];
+        } else if (!isNaN(parseInt(denom, 10))) {
+            var degNum = parseInt(denom, 10);
+            var degIdx = (degNum - 1 + 7) % 7;
+            bassOverridePc = (rootPc + scaleIntervals[degIdx % scaleIntervals.length]) % 12;
+        } else {
+            var pcMap = {"c": 0, "c#": 1, "db": 1, "d": 2, "d#": 3, "eb": 3, "e": 4, "f": 5, "f#": 6, "gb": 6, "g": 7, "g#": 8, "ab": 8, "a": 9, "a#": 10, "bb": 10, "b": 11};
+            if (pcMap[denom] !== undefined) {
+                bassOverridePc = pcMap[denom];
+            }
+        }
     }
 
     var accidental = 0;
@@ -195,7 +231,7 @@ function parseChordToken(tok, rootPc, scaleIntervals) {
         intervals = isUpper ? [0, 4, 7] : [0, 3, 7];
     }
 
-    return { rootPc: chordRootPc, intervals: intervals, duration: dur };
+    return { rootPc: chordRootPc, intervals: intervals, duration: dur, bassPc: bassOverridePc };
 }
 
 function applyVoicing(chordNotes, voicing) {
@@ -460,6 +496,29 @@ function generate() {
         }
         rawPitches.sort(function(a, b) { return a - b; });
 
+        if (chord.bassPc !== null && chord.bassPc !== undefined) {
+            var hasChordTone = false;
+            for (var ct = 0; ct < rawPitches.length; ct++) {
+                if (rawPitches[ct] % 12 === chord.bassPc) {
+                    hasChordTone = true;
+                    break;
+                }
+            }
+            if (hasChordTone) {
+                for (var rot = 0; rot < rawPitches.length; rot++) {
+                    if (rawPitches[0] % 12 === chord.bassPc) break;
+                    rawPitches[0] += 12;
+                    rawPitches.sort(function(a, b) { return a - b; });
+                }
+            } else {
+                var lowest = rawPitches[0];
+                var diff = (lowest % 12 - chord.bassPc + 12) % 12;
+                var bassMidi = lowest - diff;
+                if (bassMidi >= lowest) bassMidi -= 12;
+                rawPitches = [bassMidi].concat(rawPitches);
+            }
+        }
+
         var voicedPitches = applyVoicing(rawPitches, currentVoicing);
 
         if (currentRootless && voicedPitches.length > 2) {
@@ -467,7 +526,23 @@ function generate() {
         }
 
         if (currentVoiceLead && prevChordNotes) {
-            voicedPitches = optimizeVoiceLeading(voicedPitches, prevChordNotes);
+            if (chord.bassPc !== null && chord.bassPc !== undefined) {
+                var bestShifted = voicedPitches;
+                var minDisp = Infinity;
+                for (var shift = -12; shift <= 12; shift += 12) {
+                    var cand = voicedPitches.map(function(p) { return p + shift; });
+                    var disp = 0;
+                    var len = Math.min(cand.length, prevChordNotes.length);
+                    for (var k = 0; k < len; k++) disp += Math.abs(cand[k] - prevChordNotes[k]);
+                    if (disp < minDisp) {
+                        minDisp = disp;
+                        bestShifted = cand;
+                    }
+                }
+                voicedPitches = bestShifted;
+            } else {
+                voicedPitches = optimizeVoiceLeading(voicedPitches, prevChordNotes);
+            }
         }
         prevChordNotes = voicedPitches.slice();
 
@@ -605,11 +680,22 @@ def get_midison_generator_patcher() -> dict[str, Any]:
         "I - V - vi - IV",
         "i7 - iv7 - v7 - i7",
         "ii9 - V13 - Imaj9",
-        "Imaj9 - IVmaj7",
-        "i9 - IV9",
-        "iiø7 - V7b9 - i",
         "I - bVII - IV - I",
-        "Imaj7 - V7/vi - vi7 - ii7",
+        "[Verse] IVmaj7 - V7 - iii7 - vi7",
+        "[Verse] Imaj9 - iv9",
+        "[Pre] ii7 - V7 - Imaj7 - I7",
+        "[Pre] IVmaj9 - iii7 - ii9 - V7b9",
+        "[Chorus] Imaj9 - V7/vi - vi7 - ii9 - V13",
+        "[Chorus] IV - I - V - vi",
+        "[Bridge] iiø7 - V7b9 - i7 - iv7",
+        "[Bridge] bVImaj7 - bVII7 - Imaj7",
+        "[Vibe] City Pop: IVmaj7 - V7 - iii7 - vi",
+        "[Vibe] Dreamy Lofi: Imaj9 - iv9",
+        "[Vibe] Dark Tension: i - bII - vii°7 - i",
+        "[Vibe] Neo-Soul: ii9 - V13 - Imaj9",
+        "[Vibe] Gospel Uplift: I - I7/3 - IV - iv - I/5 - V7 - I",
+        "[Vibe] Dark R&B: i7 - iv7 - bVImaj7 - V7b9",
+        "[Vibe] Dorian Funk: i9 - IV9",
     ]
     voicings = ["Close", "Drop 2", "Drop 3", "Drop 2&4", "Spread"]
     grooves = [

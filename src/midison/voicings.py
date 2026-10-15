@@ -21,22 +21,68 @@ from __future__ import annotations
 VoicingName = str  # one of: 'close', 'drop2', 'drop3', 'drop2and4', 'spread', 'rootless'
 
 
-def apply_voicing(notes: list[int], voicing: VoicingName) -> list[int]:
-    """Dispatch to the named voicing transformation."""
+def apply_voicing(
+    notes: list[int],
+    voicing: VoicingName,
+    bass_note: int | None = None,
+    bass_pc: int | None = None,
+) -> list[int]:
+    """Dispatch to the named voicing transformation.
+
+    If bass_note or bass_pc is provided (explicit slash chord bass override),
+    anchors that bass pitch class at the bottom of the voicing.
+    """
     notes = sorted(notes)
     if voicing == "close":
-        return _close(notes)
-    if voicing == "drop2":
-        return _drop_n_from_top(notes, [2])
-    if voicing == "drop3":
-        return _drop_n_from_top(notes, [3])
-    if voicing == "drop2and4":
-        return _drop_n_from_top(notes, [2, 4])
-    if voicing == "spread":
-        return _spread(notes)
-    if voicing == "rootless":
-        return _rootless(notes)
-    raise ValueError(f"Unknown voicing: {voicing!r}")
+        result = _close(notes)
+    elif voicing == "drop2":
+        result = _drop_n_from_top(notes, [2])
+    elif voicing == "drop3":
+        result = _drop_n_from_top(notes, [3])
+    elif voicing == "drop2and4":
+        result = _drop_n_from_top(notes, [2, 4])
+    elif voicing == "spread":
+        result = _spread(notes)
+    elif voicing == "rootless":
+        result = _rootless(notes)
+    else:
+        raise ValueError(f"Unknown voicing: {voicing!r}")
+
+    target_pc = bass_pc if bass_pc is not None else (bass_note % 12 if bass_note is not None else None)
+    if target_pc is not None:
+        result = _anchor_bass(result, target_pc)
+
+    return result
+
+
+def _anchor_bass(notes: list[int], bass_pc: int) -> list[int]:
+    """Ensure that the note with pitch class bass_pc is the lowest note in notes."""
+    notes = sorted(notes)
+    if not notes:
+        return notes
+    if notes[0] % 12 == bass_pc:
+        return notes
+
+    candidates = [n for n in notes if n % 12 == bass_pc]
+    if candidates:
+        chosen = min(candidates)
+        other_notes = [n for n in notes if n != chosen or candidates.count(n) > 1]
+        other_lowest = min(other_notes) if other_notes else chosen
+        shifted = chosen
+        while shifted >= other_lowest:
+            shifted -= 12
+        new_notes = list(notes)
+        new_notes.remove(chosen)
+        new_notes.append(shifted)
+        return sorted(new_notes)
+    else:
+        lowest = notes[0]
+        bass_val = lowest - ((lowest - bass_pc) % 12)
+        if bass_val == lowest:
+            bass_val -= 12
+        while bass_val >= lowest:
+            bass_val -= 12
+        return sorted([bass_val] + notes)
 
 
 def _close(notes: list[int]) -> list[int]:

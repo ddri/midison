@@ -237,3 +237,50 @@ def test_generator_js_musical_timing_and_chords():
         assert n["duration"] > 3.5
 
 
+def test_generator_js_section_and_slash_chord():
+    """Verify that section presets with prefixes and slash chords parse and anchor bass properly."""
+    import json
+    import subprocess
+
+    from midison.miditool import MIDISON_GENERATOR_JS
+
+    script = f"""
+    var outputPayload = null;
+    function Dict(name) {{
+        this.name = name || "d1";
+        this.contains = function() {{ return false; }};
+        this.get = function() {{ return null; }};
+        this.parse = function(jsonStr) {{
+            outputPayload = JSON.parse(jsonStr);
+        }};
+    }}
+    function outlet(idx, type, val) {{}}
+
+    {MIDISON_GENERATOR_JS}
+
+    // Custom progression with section prefix and slash chord
+    preset("[Verse] I - I7/3 - IV");
+    voicing("Close");
+    groove("Block");
+    generate();
+
+    console.log(JSON.stringify(outputPayload));
+    """
+    res = subprocess.run(["node", "-e", script], check=False, capture_output=True, text=True)
+    assert res.returncode == 0, f"Node failed: {res.stderr}"
+
+    payload = json.loads(res.stdout)
+    assert "notes" in payload
+    notes = payload["notes"]
+    assert len(notes) >= 3
+
+    # Check chord 2 (I7/3): start_time = 4.0. In C major (root 0), 3rd is E (pc 4).
+    # The lowest note should have pitch class 4!
+    chord2_notes = [n for n in notes if 3.9 < n["start_time"] < 5.0]
+    chord2_notes.sort(key=lambda n: n["pitch"])
+    assert len(chord2_notes) >= 3
+    lowest_pitch = chord2_notes[0]["pitch"]
+    assert lowest_pitch % 12 == 4  # E in the bass!
+
+
+

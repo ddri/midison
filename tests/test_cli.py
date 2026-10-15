@@ -226,3 +226,50 @@ class TestCliMain:
         mock_stream.assert_called_once()
         captured = capsys.readouterr()
         assert "Streaming live to MIDI port" in captured.out
+
+    def test_cli_suggest_flag(self, capsys):
+        exit_code = main(["ii7 - V7", "--suggest", "-k", "C"])
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        assert "Harmonic Navigator: Next Chord Suggestions" in captured.out
+        assert "Imaj7" in captured.out
+        assert "Cmaj7" in captured.out
+
+    def test_cli_suggest_subcommand(self, capsys):
+        exit_code = main(["suggest", "ii7 - V7", "-k", "G"])
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        assert "Harmonic Navigator: Next Chord Suggestions" in captured.out
+        assert "G major" in captured.out
+
+    def test_cli_list_vibes(self, capsys):
+        exit_code = main(["--list-vibes"])
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        assert "Available Midison Emotion & Genre Vibes" in captured.out
+        assert "Melancholy City Pop" in captured.out
+        assert "Dreamy Lo-Fi Nostalgia" in captured.out
+
+    def test_cli_vibe_generation(self, capsys, tmp_path):
+        exit_code = main(["--vibe", "melancholy_city_pop", "--output-dir", str(tmp_path)])
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        assert "Applying Vibe: Melancholy City Pop" in captured.out
+        assert "Generated MIDI progression" in captured.out
+
+    def test_cli_list_songs(self, capsys):
+        exit_code = main(["--list-songs"])
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        assert "Available Midison Multi-Section Song Templates" in captured.out
+        assert "Neo-Soul" in captured.out
+        assert "City Pop" in captured.out
+
+    def test_cli_song_generation(self, capsys, tmp_path):
+        exit_code = main(["--song", "city_pop", "--output-dir", str(tmp_path)])
+        assert exit_code == 0
+        captured = capsys.readouterr()
+        assert "Generated Song Arrangement: City Pop" in captured.out
+        assert "Verse" in captured.out
+        assert "Chorus" in captured.out
+

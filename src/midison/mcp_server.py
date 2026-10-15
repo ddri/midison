@@ -14,6 +14,7 @@ import asyncio
 import json
 import logging
 import sys
+from typing import Any
 
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
@@ -227,6 +228,82 @@ GENERATE_MIDI_PROGRESSION_SCHEMA = {
                 "stylistic references, etc). Written verbatim into the .md sidecar."
             ),
         },
+        "vibe": {
+            "type": "string",
+            "description": (
+                "Optional emotion or genre vibe ID or search query (e.g. 'melancholy_city_pop', 'dreamy_lofi_nostalgia', 'dark_cinematic_tension'). "
+                "When provided, automatically resolves the progression, scale, BPM, and groove if omitted."
+            ),
+        },
+    },
+}
+
+SUGGEST_NEXT_CHORD_SCHEMA = {
+    "type": "object",
+    "required": ["current_progression"],
+    "properties": {
+        "current_progression": {
+            "type": "string",
+            "description": "Current Roman numeral chord progression string, e.g. 'ii7 - V7' or 'Imaj7 - vi7'.",
+        },
+        "key_center": {
+            "type": "string",
+            "default": "C",
+            "description": "Tonic note name, e.g. 'C', 'Eb', 'F#'.",
+        },
+        "scale_type": {
+            "type": "string",
+            "enum": sorted(MODE_INTERVALS.keys()),
+            "default": "major",
+            "description": "Scale/mode of the key.",
+        },
+    },
+}
+
+GENERATE_SONG_STRUCTURE_SCHEMA = {
+    "type": "object",
+    "required": ["template_id"],
+    "properties": {
+        "template_id": {
+            "type": "string",
+            "enum": ["neo_soul", "pop_anthem", "lofi_chill", "cinematic_minor", "city_pop"],
+            "description": "Curated multi-section song architecture template ID.",
+        },
+        "key_center": {
+            "type": "string",
+            "description": "Optional key center override (defaults to template's recommended key).",
+        },
+        "scale_type": {
+            "type": "string",
+            "enum": sorted(MODE_INTERVALS.keys()),
+            "description": "Optional mode/scale override (defaults to template's recommended scale).",
+        },
+        "bpm": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 999,
+            "description": "Optional tempo in BPM (defaults to template's recommended BPM).",
+        },
+        "to_ableton": {
+            "type": "boolean",
+            "default": False,
+            "description": "Inject all sections directly into Ableton Live scenes (Scene 0=Verse, Scene 1=Pre, Scene 2=Chorus, Scene 3=Bridge).",
+        },
+        "track_index": {
+            "type": "integer",
+            "default": 0,
+            "description": "Target Ableton Live track index for injection (default: 0).",
+        },
+    },
+}
+
+LIST_VIBES_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "query": {
+            "type": "string",
+            "description": "Optional mood, genre, or keyword search query (e.g. 'city pop', 'lofi', 'dark', 'uplifting').",
+        },
     },
 }
 
@@ -388,6 +465,34 @@ async def list_tools() -> list[Tool]:
             ),
             inputSchema=SET_OUTPUT_DIRECTORY_SCHEMA,
         ),
+        Tool(
+            name="suggest_next_chord",
+            description=(
+                "Intelligent Harmonic Navigator: recommend musically compelling next chords from "
+                "a given Roman numeral chord progression. Analyzes the current chord and returns "
+                "4-6 diverse recommendations covering diatonic cadential motion, secondary dominants, "
+                "modal mixture borrows, tritone substitutions, and chromatic passing chords."
+            ),
+            inputSchema=SUGGEST_NEXT_CHORD_SCHEMA,
+        ),
+        Tool(
+            name="generate_song_structure",
+            description=(
+                "Generate a complete multi-section song architecture (Verse, Pre-Chorus, Chorus, Bridge) "
+                "using curated songwriting templates ('neo_soul', 'pop_anthem', 'lofi_chill', 'cinematic_minor', 'city_pop'). "
+                "Optionally injects all sections directly into Ableton Live scenes 0..3."
+            ),
+            inputSchema=GENERATE_SONG_STRUCTURE_SCHEMA,
+        ),
+        Tool(
+            name="list_vibes",
+            description=(
+                "Explore the Emotion & Genre Vibe catalog. Search by mood tags, title, or musical description "
+                "(e.g. 'city pop', 'lofi', 'dark', 'euphoric', 'sad') to find curated progressions with matching "
+                "voicing, tempo, and groove recommendations."
+            ),
+            inputSchema=LIST_VIBES_SCHEMA,
+        ),
     ]
 
 
@@ -429,6 +534,34 @@ def handle_generate_midi_progression(arguments: dict) -> dict:
 
 def _build_generation_request(arguments: dict) -> GenerationRequest:
     """Translate the MCP arguments dict into a GenerationRequest dataclass."""
+    arguments = dict(arguments)
+    if "vibe" in arguments and ("chords" not in arguments or not arguments["chords"]):
+        from midison.cli import parse_progression_string
+        from midison.vibes import find_vibes, get_vibe
+        vibe_str = str(arguments["vibe"])
+        try:
+            vibe_obj = get_vibe(vibe_str)
+        except Exception:
+            matches = find_vibes(vibe_str)
+            if not matches:
+                raise ValueError(f"No vibe matching {vibe_str!r} found.")
+            vibe_obj = matches[0]
+        if "key_center" not in arguments or arguments["key_center"] is None:
+            arguments["key_center"] = vibe_obj.suggested_key
+        if "scale_type" not in arguments or arguments["scale_type"] is None:
+            arguments["scale_type"] = vibe_obj.suggested_scale
+        if "bpm" not in arguments or arguments["bpm"] is None:
+            arguments["bpm"] = vibe_obj.suggested_bpm
+        chord_specs = parse_progression_string(
+            vibe_obj.progression,
+            default_voicing=vibe_obj.suggested_voicing,
+            default_pattern=vibe_obj.suggested_groove,
+        )
+        arguments["chords"] = [
+            {"numeral": c.numeral, "duration_beats": c.duration_beats, "voicing": c.voicing, "pattern": c.pattern}
+            for c in chord_specs
+        ]
+
     for required in ("key_center", "scale_type", "bpm", "chords"):
         if required not in arguments:
             raise ValueError(f"Missing required argument: {required}")
@@ -618,6 +751,111 @@ def handle_install_ableton_integrations(arguments: dict) -> dict:
     }
 
 
+def handle_suggest_next_chord(arguments: dict) -> dict:
+    """Recommend musically compelling next chords across 5 harmonic pathways."""
+    from midison.suggest import suggest_next_chords
+    if "current_progression" not in arguments:
+        raise ValueError("Missing required argument: current_progression")
+    prog = str(arguments["current_progression"])
+    key = str(arguments.get("key_center", "C"))
+    scale = str(arguments.get("scale_type", "major"))
+    suggestions = suggest_next_chords(prog, key_center=key, scale_type=scale)
+    return {
+        "status": "success",
+        "current_progression": prog,
+        "key_center": key,
+        "scale_type": scale,
+        "suggestions": [
+            {
+                "numeral": s.numeral,
+                "chord_name": s.chord_name,
+                "pathway": s.pathway,
+                "mood_descriptor": s.mood_descriptor,
+                "explanation": s.explanation,
+            }
+            for s in suggestions
+        ],
+    }
+
+
+def handle_generate_song_structure(arguments: dict) -> dict:
+    """Generate a multi-section song arrangement and optionally inject to Ableton Live."""
+    from midison.song import generate_song_arrangement, inject_song_into_ableton
+    if "template_id" not in arguments:
+        raise ValueError("Missing required argument: template_id")
+    template_id = str(arguments["template_id"])
+    key_center = arguments.get("key_center")
+    scale_type = arguments.get("scale_type")
+    bpm = arguments.get("bpm")
+    to_ableton = bool(arguments.get("to_ableton", False))
+    track_index = int(arguments.get("track_index", 0))
+
+    output_dir = config.get_output_directory()
+    arrangement = generate_song_arrangement(
+        template_id=template_id,
+        key_center=key_center,
+        scale_type=scale_type,
+        bpm=bpm,
+        output_dir=output_dir,
+    )
+    res: dict[str, Any] = {
+        "status": "success",
+        "template_id": template_id,
+        "template_name": arrangement.template.name,
+        "key_center": arrangement.key_center,
+        "scale_type": arrangement.scale_type,
+        "bpm": arrangement.bpm,
+        "total_beats": arrangement.total_beats,
+        "sections": [
+            {
+                "name": s.section_plan.name,
+                "progression": s.section_plan.progression,
+                "voicing": s.section_plan.voicing,
+                "pattern": s.section_plan.pattern,
+                "notes_count": s.notes_count,
+                "total_beats": s.total_beats,
+                "midi_path": str(s.midi_path) if s.midi_path else None,
+            }
+            for s in arrangement.sections
+        ],
+    }
+    if to_ableton:
+        client = AbletonClient()
+        injected = inject_song_into_ableton(arrangement, client=client, track_index=track_index)
+        res["ableton_injected"] = injected
+    return res
+
+
+def handle_list_vibes(arguments: dict) -> dict:
+    """List or search the Emotion & Genre Vibe catalog."""
+    from midison.vibes import find_vibes, list_all_vibes
+    query = arguments.get("query")
+    if query:
+        vibes = find_vibes(str(query))
+    else:
+        vibes = list_all_vibes()
+    return {
+        "status": "success",
+        "count": len(vibes),
+        "vibes": [
+            {
+                "vibe_id": v.vibe_id,
+                "title": v.title,
+                "mood_tags": v.mood_tags,
+                "description": v.description,
+                "progression": v.progression,
+                "harmonic_context": v.harmonic_context,
+                "suggested_key": v.suggested_key,
+                "suggested_scale": v.suggested_scale,
+                "suggested_bpm": v.suggested_bpm,
+                "suggested_voicing": v.suggested_voicing,
+                "suggested_groove": v.suggested_groove,
+            }
+            for v in vibes
+        ],
+    }
+
+
 # ---------------------------------------------------------------------------
 # MCP dispatcher
 # ---------------------------------------------------------------------------
@@ -637,6 +875,12 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         result = handle_stream_to_midi_port(arguments)
     elif name == "install_ableton_integrations":
         result = handle_install_ableton_integrations(arguments)
+    elif name == "suggest_next_chord":
+        result = handle_suggest_next_chord(arguments)
+    elif name == "generate_song_structure":
+        result = handle_generate_song_structure(arguments)
+    elif name == "list_vibes":
+        result = handle_list_vibes(arguments)
     else:
         raise ValueError(f"Unknown tool: {name}")
     return [TextContent(type="text", text=json.dumps(result, indent=2))]
