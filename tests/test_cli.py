@@ -1,4 +1,4 @@
-"""Tests for the banjo CLI tool."""
+"""Tests for the midison CLI tool."""
 
 from __future__ import annotations
 

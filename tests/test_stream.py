@@ -1,5 +1,5 @@
 """
-Unit tests for real-time virtual MIDI streaming (banjo.stream).
+Unit tests for real-time virtual MIDI streaming (midison.stream).
 """
 
 import threading

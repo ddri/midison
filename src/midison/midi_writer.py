@@ -86,7 +86,7 @@ def generate(request: GenerationRequest, output_dir: Path) -> GenerationResult:
     output_dir.mkdir(parents=True, exist_ok=True)
     generated_at = datetime.now(timezone.utc)
 
-    rng = random.Random(request.seed) if request.seed is not None else random.Random()
+    rng = random.Random(request.seed) if request.seed is not None else random.Random()  # nosec B311
 
     key_pc = parse_pitch_class(request.key_center)
 

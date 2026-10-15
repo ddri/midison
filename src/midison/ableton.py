@@ -1,7 +1,7 @@
 """
-Direct Ableton Live integration for Banjo via AbletonOSC.
+Direct Ableton Live integration for Midison via AbletonOSC.
 
-Allows Claude Desktop and the Banjo CLI to directly create and populate
+Allows Claude Desktop and the Midison CLI to directly create and populate
 MIDI clips on specific tracks and clip slots in an active Ableton Live session.
 Zero manual file export or drag-and-drop required.
 """
@@ -9,8 +9,9 @@ Zero manual file export or drag-and-drop required.
 from __future__ import annotations
 
 import logging
+import shutil
 import socket
-import subprocess
+import subprocess  # nosec B404
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -316,19 +317,23 @@ def install_ableton_osc(target_dir: Path | None = None) -> Path:
 
     target_dir.parent.mkdir(parents=True, exist_ok=True)
 
+    git_bin = shutil.which("git") or "git"
     if target_dir.exists() and (target_dir / ".git").exists():
         # Update existing
-        subprocess.run(["git", "-C", str(target_dir), "pull"], check=True, capture_output=True)
+        subprocess.run(
+            [git_bin, "-C", str(target_dir), "pull"], check=True, capture_output=True, timeout=60
+        )  # nosec B603
     elif target_dir.exists():
         # Directory exists already
         pass
     else:
         # Clone fresh
         subprocess.run(
-            ["git", "clone", "--depth", "1", "https://github.com/ideoforms/AbletonOSC.git", str(target_dir)],
+            [git_bin, "clone", "--depth", "1", "https://github.com/ideoforms/AbletonOSC.git", str(target_dir)],
             check=True,
             capture_output=True,
-        )
+            timeout=60,
+        )  # nosec B603
 
     # Also make sure it's accessible from Preferences User Remote Scripts if User Library was targeted
     pref_base = Path.home() / "Library/Preferences/Ableton"

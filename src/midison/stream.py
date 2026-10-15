@@ -1,5 +1,5 @@
 """
-Real-time Virtual MIDI streaming for Banjo.
+Real-time Virtual MIDI streaming for Midison.
 
 Streams voice-led chord progressions and groove pulses directly into
 a macOS CoreMIDI virtual port or existing MIDI port (e.g., IAC Driver).
@@ -164,8 +164,8 @@ def stream_notes(
         if close_port_on_exit:
             try:
                 port.close()
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("Error closing MIDI port: %s", exc)
 
     return messages_sent
 

@@ -1,5 +1,5 @@
 """
-Unit tests for Ableton Live direct clip injection (banjo.ableton).
+Unit tests for Ableton Live direct clip injection (midison.ableton).
 """
 
 from unittest.mock import MagicMock, patch

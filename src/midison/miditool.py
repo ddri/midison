@@ -81,21 +81,6 @@ MIDISON_GENERATOR_JS = r"""autowatch = 1;
 inlets = 1;
 outlets = 1;
 
-var currentProgression = "ii7 - V7 - Imaj7";
-var currentVoicing = "Drop 2";
-var currentGroove = "Block";
-var currentOctave = 3;
-var currentVoiceLead = 1;
-var currentRootless = 0;
-var currentHumanize = 0;
-var lastInDictName = null;
-
-var romanDegrees = {
-    "i": 0, "ii": 1, "iii": 2, "iv": 3, "v": 4, "vi": 5, "vii": 6
-};
-
-var defaultScaleIntervals = [0, 2, 4, 5, 7, 9, 11];
-
 var PRESETS = [
     "ii7 - V7 - Imaj7",
     "Imaj7 - vi7 - ii7 - V7",
@@ -109,29 +94,63 @@ var PRESETS = [
     "Imaj7 - V7/vi - vi7 - ii7"
 ];
 
+var VOICINGS = ["Close", "Drop 2", "Drop 3", "Drop 2&4", "Spread"];
+var GROOVES = [
+    "Block", "Charleston", "Bossa", "Strum", "Tresillo",
+    "Waltz", "4 on Floor", "Arp Up", "Arp Down", "Comp Sync"
+];
+
+var currentProgression = PRESETS[0];
+var currentVoicing = "Drop 2";
+var currentGroove = "Block";
+var currentOctave = 3;
+var currentVoiceLead = 1;
+var currentRootless = 0;
+var currentHumanize = 0;
+
+var currentRootPc = 0;
+var currentScaleIntervals = [0, 2, 4, 5, 7, 9, 11];
+var clipSelectionBeats = null;
+
+var romanDegrees = {
+    "i": 0, "ii": 1, "iii": 2, "iv": 3, "v": 4, "vi": 5, "vii": 6
+};
+
+function splitProgression(str) {
+    if (!str) return ["I"];
+    var cleaned = str.replace(/[–—]/g, "-").trim();
+    var parts = cleaned.split(/\s*,\s*|\s+-\s+|\s+/);
+    var tokens = [];
+    for (var i = 0; i < parts.length; i++) {
+        var t = parts[i].trim().replace(/^-+|-+$/g, "");
+        if (t.length > 0) tokens.push(t);
+    }
+    return tokens.length > 0 ? tokens : ["I"];
+}
+
 function parseChordToken(tok, rootPc, scaleIntervals) {
     var raw = tok.trim();
     if (!raw) return null;
     var dur = 4.0;
-    if (raw.indexOf(':') !== -1) {
-        var parts = raw.split(':');
+    if (raw.indexOf(":") !== -1) {
+        var parts = raw.split(":");
         raw = parts[0];
         dur = parseFloat(parts[1]) || 4.0;
     }
 
     var targetDeg = null;
-    if (raw.indexOf('/') !== -1) {
-        var slashParts = raw.split('/');
+    if (raw.indexOf("/") !== -1) {
+        var slashParts = raw.split("/");
         raw = slashParts[0];
-        var targetStr = slashParts[1].toLowerCase().replace(/[^a-z]/g, '');
+        var targetStr = slashParts[1].toLowerCase().replace(/[^a-z]/g, "");
         targetDeg = romanDegrees[targetStr];
     }
 
     var accidental = 0;
-    if (raw.charAt(0) === 'b' || raw.charAt(0) === '♭') {
+    if (raw.charAt(0) === "b" || raw.charAt(0) === "♭") {
         accidental = -1;
         raw = raw.substring(1);
-    } else if (raw.charAt(0) === '#' || raw.charAt(0) === '♯') {
+    } else if (raw.charAt(0) === "#" || raw.charAt(0) === "♯") {
         accidental = 1;
         raw = raw.substring(1);
     }
@@ -139,7 +158,7 @@ function parseChordToken(tok, rootPc, scaleIntervals) {
     var match = raw.match(/^([ivIV]+)(.*)$/);
     if (!match) return null;
     var numeral = match[1];
-    var suffix = match[2] || '';
+    var suffix = match[2] || "";
     var isUpper = (numeral === numeral.toUpperCase());
     var baseDeg = romanDegrees[numeral.toLowerCase()] || 0;
 
@@ -154,24 +173,24 @@ function parseChordToken(tok, rootPc, scaleIntervals) {
 
     var intervals;
     var s = suffix.toLowerCase();
-    if (s.indexOf('maj9') !== -1) intervals = [0, 4, 7, 11, 14];
-    else if (s.indexOf('maj13') !== -1) intervals = [0, 4, 7, 11, 14, 21];
-    else if (s.indexOf('maj7') !== -1 || (s.indexOf('m7') === -1 && s.indexOf('maj') !== -1)) intervals = [0, 4, 7, 11];
-    else if (s.indexOf('m7b5') !== -1 || s.indexOf('ø') !== -1) intervals = [0, 3, 6, 10];
-    else if (s.indexOf('dim7') !== -1 || s.indexOf('°7') !== -1) intervals = [0, 3, 6, 9];
-    else if (s.indexOf('dim') !== -1 || s.indexOf('°') !== -1) intervals = [0, 3, 6];
-    else if (s.indexOf('m11') !== -1) intervals = [0, 3, 7, 10, 14, 17];
-    else if (s.indexOf('m9') !== -1 || s.indexOf('min9') !== -1) intervals = [0, 3, 7, 10, 14];
-    else if (s.indexOf('m7') !== -1 || s.indexOf('min7') !== -1) intervals = [0, 3, 7, 10];
-    else if (s.indexOf('7b9') !== -1) intervals = [0, 4, 7, 10, 13];
-    else if (s.indexOf('7#9') !== -1) intervals = [0, 4, 7, 10, 15];
-    else if (s.indexOf('13') !== -1) intervals = [0, 4, 7, 10, 14, 21];
-    else if (s.indexOf('9') !== -1) intervals = [0, 4, 7, 10, 14];
-    else if (s.indexOf('7') !== -1) {
+    if (s.indexOf("maj9") !== -1) intervals = [0, 4, 7, 11, 14];
+    else if (s.indexOf("maj13") !== -1) intervals = [0, 4, 7, 11, 14, 21];
+    else if (s.indexOf("maj7") !== -1 || (s.indexOf("m7") === -1 && s.indexOf("maj") !== -1)) intervals = [0, 4, 7, 11];
+    else if (s.indexOf("m7b5") !== -1 || s.indexOf("ø") !== -1) intervals = [0, 3, 6, 10];
+    else if (s.indexOf("dim7") !== -1 || s.indexOf("°7") !== -1) intervals = [0, 3, 6, 9];
+    else if (s.indexOf("dim") !== -1 || s.indexOf("°") !== -1) intervals = [0, 3, 6];
+    else if (s.indexOf("m11") !== -1) intervals = [0, 3, 7, 10, 14, 17];
+    else if (s.indexOf("m9") !== -1 || s.indexOf("min9") !== -1) intervals = [0, 3, 7, 10, 14];
+    else if (s.indexOf("m7") !== -1 || s.indexOf("min7") !== -1) intervals = [0, 3, 7, 10];
+    else if (s.indexOf("7b9") !== -1) intervals = [0, 4, 7, 10, 13];
+    else if (s.indexOf("7#9") !== -1) intervals = [0, 4, 7, 10, 15];
+    else if (s.indexOf("13") !== -1) intervals = [0, 4, 7, 10, 14, 21];
+    else if (s.indexOf("9") !== -1) intervals = [0, 4, 7, 10, 14];
+    else if (s.indexOf("7") !== -1) {
         intervals = isUpper ? [0, 4, 7, 10] : [0, 3, 7, 10];
-    } else if (s.indexOf('sus4') !== -1) intervals = [0, 5, 7];
-    else if (s.indexOf('sus2') !== -1) intervals = [0, 2, 7];
-    else if (s.indexOf('aug') !== -1 || s.indexOf('+') !== -1) intervals = [0, 4, 8];
+    } else if (s.indexOf("sus4") !== -1) intervals = [0, 5, 7];
+    else if (s.indexOf("sus2") !== -1) intervals = [0, 2, 7];
+    else if (s.indexOf("aug") !== -1 || s.indexOf("+") !== -1) intervals = [0, 4, 8];
     else {
         intervals = isUpper ? [0, 4, 7] : [0, 3, 7];
     }
@@ -282,7 +301,7 @@ function renderGrooveNotes(chordNotes, startBeat, durationBeats, groove, humaniz
     } else if (groove === "Strum") {
         for (var i = 0; i < chordNotes.length; i++) {
             var stagger = i * 0.025;
-            addNote(chordNotes[i], startBeat + stagger, Math.max(0.2, dur - stagger), 90 + i * 2);
+            addNote(chordNotes[i], startBeat + stagger, Math.max(0.5, dur - stagger), 90 + i * 2);
         }
     } else if (groove === "Tresillo") {
         for (var b = 0; b < dur; b += 4.0) {
@@ -344,52 +363,87 @@ function renderGrooveNotes(chordNotes, startBeat, durationBeats, groove, humaniz
     return outNotes;
 }
 
-function generate() {
-    var rootPc = 0;
-    var scaleIntervals = defaultScaleIntervals;
-    var totalBeats = 16.0;
+function parseScaleAndSelectionFromDict(d) {
+    if (!d) return;
+    try {
+        if (d.contains("scale::root_note")) {
+            currentRootPc = parseInt(d.get("scale::root_note"), 10) || 0;
+        }
+        if (d.contains("scale::scale_intervals")) {
+            var si = d.get("scale::scale_intervals");
+            if (si && si.length) {
+                currentScaleIntervals = [];
+                for (var k = 0; k < si.length; k++) currentScaleIntervals.push(parseInt(si[k], 10));
+            }
+        }
+    } catch (e1) {}
 
-    if (lastInDictName) {
-        try {
-            var inDict = new Dict(lastInDictName);
-            if (inDict.contains("scale")) {
-                var sDict = inDict.get("scale");
-                if (sDict) {
-                    if (sDict.contains("root_note")) rootPc = sDict.get("root_note");
-                    if (sDict.contains("scale_intervals")) {
-                        var ints = sDict.get("scale_intervals");
-                        if (ints && ints.length) scaleIntervals = ints;
+    try {
+        if (d.contains("scale")) {
+            var s = d.get("scale");
+            if (s) {
+                if (typeof s.get === "function") {
+                    if (s.contains("root_note")) currentRootPc = parseInt(s.get("root_note"), 10) || 0;
+                    if (s.contains("scale_intervals")) {
+                        var si2 = s.get("scale_intervals");
+                        if (si2 && si2.length) {
+                            currentScaleIntervals = [];
+                            for (var k2 = 0; k2 < si2.length; k2++) currentScaleIntervals.push(parseInt(si2[k2], 10));
+                        }
+                    }
+                } else if (typeof s === "object") {
+                    if (s.root_note !== undefined) currentRootPc = parseInt(s.root_note, 10) || 0;
+                    if (s.scale_intervals && s.scale_intervals.length) {
+                        currentScaleIntervals = [];
+                        for (var k3 = 0; k3 < s.scale_intervals.length; k3++) currentScaleIntervals.push(parseInt(s.scale_intervals[k3], 10));
                     }
                 }
             }
-            if (inDict.contains("selection")) {
-                var sel = inDict.get("selection");
-                if (sel && sel.contains("end_time") && sel.contains("start_time")) {
-                    var dur = sel.get("end_time") - sel.get("start_time");
-                    if (dur > 0) totalBeats = dur;
-                }
-            }
-        } catch (e) {}
-    }
+        }
+    } catch (e2) {}
 
-    var tokens = currentProgression.split(/[-–—,\s]+/).filter(function(s) { return s.length > 0; });
-    if (tokens.length === 0) tokens = ["I"];
+    try {
+        if (d.contains("time_selection_start") && d.contains("time_selection_end")) {
+            var dur1 = d.get("time_selection_end") - d.get("time_selection_start");
+            if (dur1 > 0) clipSelectionBeats = dur1;
+        }
+    } catch (e3) {}
+
+    try {
+        if (d.contains("selection::start_time") && d.contains("selection::end_time")) {
+            var dur2 = d.get("selection::end_time") - d.get("selection::start_time");
+            if (dur2 > 0) clipSelectionBeats = dur2;
+        }
+    } catch (e4) {}
+}
+
+function generate() {
+    var rootPc = currentRootPc;
+    var scaleIntervals = currentScaleIntervals;
+
+    var tokens = splitProgression(currentProgression);
 
     var parsedChords = [];
-    var explicitTotalBeats = 0;
     var hasExplicitBeats = false;
 
     for (var i = 0; i < tokens.length; i++) {
         var c = parseChordToken(tokens[i], rootPc, scaleIntervals);
         if (c) {
             parsedChords.push(c);
-            explicitTotalBeats += c.duration;
-            if (tokens[i].indexOf(':') !== -1) hasExplicitBeats = true;
+            if (tokens[i].indexOf(":") !== -1) hasExplicitBeats = true;
         }
     }
     if (parsedChords.length === 0) return;
 
-    var defaultBeatsPerChord = hasExplicitBeats ? 4.0 : (totalBeats / parsedChords.length);
+    var defaultBeatsPerChord = 4.0;
+    if (!hasExplicitBeats) {
+        if (clipSelectionBeats && clipSelectionBeats >= parsedChords.length * 2.0) {
+            defaultBeatsPerChord = clipSelectionBeats / parsedChords.length;
+        } else {
+            defaultBeatsPerChord = 4.0;
+        }
+    }
+
     var allNotes = [];
     var beatOffset = 0.0;
     var prevChordNotes = null;
@@ -433,29 +487,84 @@ function generate() {
 }
 
 function dictionary(dictName) {
-    lastInDictName = dictName;
+    try {
+        var d = new Dict(dictName);
+        parseScaleAndSelectionFromDict(d);
+    } catch (e) {}
+    generate();
+}
+
+function preset_idx(idx) {
+    var i = parseInt(idx, 10);
+    if (!isNaN(i) && i >= 0 && i < PRESETS.length) {
+        currentProgression = PRESETS[i];
+    }
     generate();
 }
 
 function preset(val) {
-    if (typeof val === "number" || (typeof val === "string" && !isNaN(parseInt(val, 10)))) {
-        var idx = parseInt(val, 10);
-        if (idx >= 0 && idx < PRESETS.length) {
-            currentProgression = PRESETS[idx];
-        }
-    } else if (typeof val === "string") {
-        currentProgression = val;
+    if (typeof val === "number") {
+        preset_idx(val);
+        return;
+    }
+    var i = parseInt(val, 10);
+    if (!isNaN(i) && i >= 0 && i < PRESETS.length && ("" + i) === ("" + val).trim()) {
+        preset_idx(i);
+        return;
+    }
+    if (arguments.length > 1) {
+        var parts = [];
+        for (var k = 0; k < arguments.length; k++) parts.push(arguments[k]);
+        currentProgression = parts.join(" ");
+    } else {
+        currentProgression = "" + val;
+    }
+    generate();
+}
+
+function voicing_idx(idx) {
+    var i = parseInt(idx, 10);
+    if (!isNaN(i) && i >= 0 && i < VOICINGS.length) {
+        currentVoicing = VOICINGS[i];
     }
     generate();
 }
 
 function voicing(val) {
-    if (typeof val === "string") currentVoicing = val;
+    if (typeof val === "number" || (!isNaN(parseInt(val, 10)) && ("" + parseInt(val, 10)) === ("" + val).trim())) {
+        voicing_idx(val);
+        return;
+    }
+    if (arguments.length > 1) {
+        var parts = [];
+        for (var k = 0; k < arguments.length; k++) parts.push(arguments[k]);
+        currentVoicing = parts.join(" ");
+    } else {
+        currentVoicing = "" + val;
+    }
+    generate();
+}
+
+function groove_idx(idx) {
+    var i = parseInt(idx, 10);
+    if (!isNaN(i) && i >= 0 && i < GROOVES.length) {
+        currentGroove = GROOVES[i];
+    }
     generate();
 }
 
 function groove(val) {
-    if (typeof val === "string") currentGroove = val;
+    if (typeof val === "number" || (!isNaN(parseInt(val, 10)) && ("" + parseInt(val, 10)) === ("" + val).trim())) {
+        groove_idx(val);
+        return;
+    }
+    if (arguments.length > 1) {
+        var parts = [];
+        for (var k = 0; k < arguments.length; k++) parts.push(arguments[k]);
+        currentGroove = parts.join(" ");
+    } else {
+        currentGroove = "" + val;
+    }
     generate();
 }
 
@@ -488,7 +597,7 @@ function bang() {
 def get_midison_generator_patcher() -> dict[str, Any]:
     """
     Generate the Max Patcher JSON definition for Midison Generator (Live 12 MIDI Tool).
-    Configured with native Live 12 UI widgets in presentation mode (width: 152px).
+    Configured with native Live 12 UI widgets in presentation mode (width: 152px, height: 144px).
     """
     presets = [
         "ii7 - V7 - Imaj7",
@@ -554,16 +663,28 @@ def get_midison_generator_patcher() -> dict[str, Any]:
                 },
             }
         },
-        # Presentation Header
+        # Trigger bang into live.miditool.in on UI parameter changes
+        {
+            "box": {
+                "id": "obj-trigger-in",
+                "maxclass": "newobj",
+                "text": "t b",
+                "numinlets": 1,
+                "numoutlets": 1,
+                "outlettype": ["bang"],
+                "patching_rect": [150.0, 30.0, 25.0, 22.0],
+            }
+        },
+        # Presentation Header (compact, fits 144px total height)
         {
             "box": {
                 "id": "obj-title",
                 "maxclass": "live.comment",
-                "text": "🎹 MIDISON",
+                "text": "MIDISON",
                 "fontface": 1,
-                "fontsize": 13.0,
+                "fontsize": 11.0,
                 "presentation": 1,
-                "presentation_rect": [8.0, 6.0, 136.0, 18.0],
+                "presentation_rect": [6.0, 3.0, 68.0, 15.0],
                 "patching_rect": [250.0, 30.0, 120.0, 20.0],
             }
         },
@@ -571,10 +692,10 @@ def get_midison_generator_patcher() -> dict[str, Any]:
             "box": {
                 "id": "obj-sub",
                 "maxclass": "live.comment",
-                "text": "Chord & Groove Generator",
-                "fontsize": 9.0,
+                "text": "Chords & Grooves",
+                "fontsize": 8.5,
                 "presentation": 1,
-                "presentation_rect": [8.0, 24.0, 136.0, 14.0],
+                "presentation_rect": [78.0, 4.0, 68.0, 13.0],
                 "patching_rect": [250.0, 55.0, 135.0, 18.0],
             }
         },
@@ -583,7 +704,7 @@ def get_midison_generator_patcher() -> dict[str, Any]:
                 "id": "obj-line1",
                 "maxclass": "live.line",
                 "presentation": 1,
-                "presentation_rect": [8.0, 40.0, 136.0, 4.0],
+                "presentation_rect": [6.0, 19.0, 140.0, 2.0],
                 "patching_rect": [250.0, 80.0, 136.0, 5.0],
             }
         },
@@ -593,9 +714,9 @@ def get_midison_generator_patcher() -> dict[str, Any]:
                 "id": "obj-lbl-preset",
                 "maxclass": "live.comment",
                 "text": "Progression",
-                "fontsize": 10.0,
+                "fontsize": 9.0,
                 "presentation": 1,
-                "presentation_rect": [8.0, 48.0, 136.0, 14.0],
+                "presentation_rect": [6.0, 22.0, 140.0, 12.0],
                 "patching_rect": [250.0, 95.0, 120.0, 18.0],
             }
         },
@@ -609,7 +730,7 @@ def get_midison_generator_patcher() -> dict[str, Any]:
                 "numoutlets": 3,
                 "outlettype": ["", "", "float"],
                 "presentation": 1,
-                "presentation_rect": [8.0, 64.0, 136.0, 16.0],
+                "presentation_rect": [6.0, 35.0, 140.0, 15.0],
                 "patching_rect": [250.0, 115.0, 136.0, 16.0],
                 "saved_attribute_attributes": {
                     "valueof": {
@@ -629,9 +750,9 @@ def get_midison_generator_patcher() -> dict[str, Any]:
                 "id": "obj-lbl-voicing",
                 "maxclass": "live.comment",
                 "text": "Voicing",
-                "fontsize": 10.0,
+                "fontsize": 9.0,
                 "presentation": 1,
-                "presentation_rect": [8.0, 86.0, 64.0, 14.0],
+                "presentation_rect": [6.0, 52.0, 68.0, 12.0],
                 "patching_rect": [250.0, 145.0, 60.0, 18.0],
             }
         },
@@ -640,9 +761,9 @@ def get_midison_generator_patcher() -> dict[str, Any]:
                 "id": "obj-lbl-groove",
                 "maxclass": "live.comment",
                 "text": "Groove",
-                "fontsize": 10.0,
+                "fontsize": 9.0,
                 "presentation": 1,
-                "presentation_rect": [78.0, 86.0, 66.0, 14.0],
+                "presentation_rect": [78.0, 52.0, 68.0, 12.0],
                 "patching_rect": [325.0, 145.0, 60.0, 18.0],
             }
         },
@@ -656,7 +777,7 @@ def get_midison_generator_patcher() -> dict[str, Any]:
                 "numoutlets": 3,
                 "outlettype": ["", "", "float"],
                 "presentation": 1,
-                "presentation_rect": [8.0, 102.0, 64.0, 16.0],
+                "presentation_rect": [6.0, 65.0, 68.0, 15.0],
                 "patching_rect": [250.0, 165.0, 64.0, 16.0],
                 "saved_attribute_attributes": {
                     "valueof": {
@@ -680,7 +801,7 @@ def get_midison_generator_patcher() -> dict[str, Any]:
                 "numoutlets": 3,
                 "outlettype": ["", "", "float"],
                 "presentation": 1,
-                "presentation_rect": [78.0, 102.0, 66.0, 16.0],
+                "presentation_rect": [78.0, 65.0, 68.0, 15.0],
                 "patching_rect": [325.0, 165.0, 66.0, 16.0],
                 "saved_attribute_attributes": {
                     "valueof": {
@@ -700,9 +821,9 @@ def get_midison_generator_patcher() -> dict[str, Any]:
                 "id": "obj-lbl-oct",
                 "maxclass": "live.comment",
                 "text": "Octave",
-                "fontsize": 10.0,
+                "fontsize": 9.0,
                 "presentation": 1,
-                "presentation_rect": [8.0, 124.0, 64.0, 14.0],
+                "presentation_rect": [6.0, 82.0, 68.0, 12.0],
                 "patching_rect": [250.0, 195.0, 60.0, 18.0],
             }
         },
@@ -711,9 +832,9 @@ def get_midison_generator_patcher() -> dict[str, Any]:
                 "id": "obj-lbl-human",
                 "maxclass": "live.comment",
                 "text": "Humanize",
-                "fontsize": 10.0,
+                "fontsize": 9.0,
                 "presentation": 1,
-                "presentation_rect": [78.0, 124.0, 66.0, 14.0],
+                "presentation_rect": [78.0, 82.0, 68.0, 12.0],
                 "patching_rect": [325.0, 195.0, 60.0, 18.0],
             }
         },
@@ -727,7 +848,7 @@ def get_midison_generator_patcher() -> dict[str, Any]:
                 "numoutlets": 2,
                 "outlettype": ["", "float"],
                 "presentation": 1,
-                "presentation_rect": [8.0, 140.0, 64.0, 16.0],
+                "presentation_rect": [6.0, 95.0, 68.0, 15.0],
                 "patching_rect": [250.0, 215.0, 64.0, 16.0],
                 "saved_attribute_attributes": {
                     "valueof": {
@@ -755,7 +876,7 @@ def get_midison_generator_patcher() -> dict[str, Any]:
                 "text": "Off",
                 "texton": "On",
                 "presentation": 1,
-                "presentation_rect": [78.0, 140.0, 66.0, 16.0],
+                "presentation_rect": [78.0, 95.0, 68.0, 15.0],
                 "patching_rect": [325.0, 215.0, 66.0, 16.0],
                 "saved_attribute_attributes": {
                     "valueof": {
@@ -773,28 +894,6 @@ def get_midison_generator_patcher() -> dict[str, Any]:
         # Voice Lead & Rootless Row
         {
             "box": {
-                "id": "obj-lbl-lead",
-                "maxclass": "live.comment",
-                "text": "Voice Lead",
-                "fontsize": 10.0,
-                "presentation": 1,
-                "presentation_rect": [8.0, 162.0, 64.0, 14.0],
-                "patching_rect": [250.0, 245.0, 60.0, 18.0],
-            }
-        },
-        {
-            "box": {
-                "id": "obj-lbl-rootless",
-                "maxclass": "live.comment",
-                "text": "Rootless",
-                "fontsize": 10.0,
-                "presentation": 1,
-                "presentation_rect": [78.0, 162.0, 66.0, 14.0],
-                "patching_rect": [325.0, 245.0, 60.0, 18.0],
-            }
-        },
-        {
-            "box": {
                 "id": "obj-btn-lead",
                 "maxclass": "live.text",
                 "varname": "VoiceLead",
@@ -802,10 +901,10 @@ def get_midison_generator_patcher() -> dict[str, Any]:
                 "numinlets": 1,
                 "numoutlets": 2,
                 "outlettype": ["", ""],
-                "text": "Off",
-                "texton": "On",
+                "text": "Lead",
+                "texton": "Lead",
                 "presentation": 1,
-                "presentation_rect": [8.0, 178.0, 64.0, 16.0],
+                "presentation_rect": [6.0, 114.0, 68.0, 18.0],
                 "patching_rect": [250.0, 265.0, 64.0, 16.0],
                 "saved_attribute_attributes": {
                     "valueof": {
@@ -829,10 +928,10 @@ def get_midison_generator_patcher() -> dict[str, Any]:
                 "numinlets": 1,
                 "numoutlets": 2,
                 "outlettype": ["", ""],
-                "text": "Off",
-                "texton": "On",
+                "text": "Rootless",
+                "texton": "Rootless",
                 "presentation": 1,
-                "presentation_rect": [78.0, 178.0, 66.0, 16.0],
+                "presentation_rect": [78.0, 114.0, 68.0, 18.0],
                 "patching_rect": [325.0, 265.0, 66.0, 16.0],
                 "saved_attribute_attributes": {
                     "valueof": {
@@ -849,55 +948,11 @@ def get_midison_generator_patcher() -> dict[str, Any]:
         },
         {
             "box": {
-                "id": "obj-line2",
-                "maxclass": "live.line",
-                "presentation": 1,
-                "presentation_rect": [8.0, 202.0, 136.0, 4.0],
-                "patching_rect": [250.0, 290.0, 136.0, 5.0],
-            }
-        },
-        # Generate Action Button
-        {
-            "box": {
-                "id": "obj-btn-generate",
-                "maxclass": "live.text",
-                "mode": 0,
-                "text": "⚡ GENERATE",
-                "texton": "⚡ GENERATE",
-                "fontface": 1,
-                "fontsize": 11.0,
-                "presentation": 1,
-                "presentation_rect": [8.0, 210.0, 136.0, 26.0],
-                "patching_rect": [250.0, 310.0, 136.0, 26.0],
-                "saved_attribute_attributes": {
-                    "valueof": {
-                        "parameter_type": 2,
-                        "parameter_mmax": 1.0,
-                        "parameter_enum": ["val1", "val2"],
-                        "parameter_longname": "Generate",
-                        "parameter_shortname": "Generate",
-                    }
-                },
-            }
-        },
-        {
-            "box": {
-                "id": "obj-scale-info",
-                "maxclass": "live.comment",
-                "text": "Auto-Key: Live Clip Scale",
-                "fontsize": 9.0,
-                "presentation": 1,
-                "presentation_rect": [8.0, 240.0, 136.0, 14.0],
-                "patching_rect": [250.0, 345.0, 136.0, 18.0],
-            }
-        },
-        {
-            "box": {
                 "id": "obj-vert-limit",
                 "maxclass": "live.line",
                 "presentation": 1,
-                "presentation_rect": [0.0, 258.0, 153.0, 5.0],
-                "patching_rect": [0.0, 258.0, 153.0, 5.0],
+                "presentation_rect": [0.0, 144.0, 152.0, 1.0],
+                "patching_rect": [0.0, 144.0, 152.0, 1.0],
             }
         },
         # Prepender routing objects to JS
@@ -905,24 +960,24 @@ def get_midison_generator_patcher() -> dict[str, Any]:
             "box": {
                 "id": "obj-prep-preset",
                 "maxclass": "newobj",
-                "text": "prepend preset",
-                "patching_rect": [250.0, 380.0, 90.0, 22.0],
+                "text": "prepend preset_idx",
+                "patching_rect": [250.0, 380.0, 110.0, 22.0],
             }
         },
         {
             "box": {
                 "id": "obj-prep-voicing",
                 "maxclass": "newobj",
-                "text": "prepend voicing",
-                "patching_rect": [250.0, 410.0, 95.0, 22.0],
+                "text": "prepend voicing_idx",
+                "patching_rect": [250.0, 410.0, 110.0, 22.0],
             }
         },
         {
             "box": {
                 "id": "obj-prep-groove",
                 "maxclass": "newobj",
-                "text": "prepend groove",
-                "patching_rect": [325.0, 410.0, 90.0, 22.0],
+                "text": "prepend groove_idx",
+                "patching_rect": [325.0, 410.0, 110.0, 22.0],
             }
         },
         {
@@ -957,27 +1012,20 @@ def get_midison_generator_patcher() -> dict[str, Any]:
                 "patching_rect": [325.0, 470.0, 100.0, 22.0],
             }
         },
-        {
-            "box": {
-                "id": "obj-trigger-gen",
-                "maxclass": "newobj",
-                "text": "t b",
-                "patching_rect": [250.0, 500.0, 25.0, 22.0],
-            }
-        },
     ]
 
     lines: list[dict[str, Any]] = [
-        # live.miditool.in -> obj-js
+        # live.miditool.in -> obj-js (outlet 0: notes, outlet 1: context)
         {"patchline": {"destination": ["obj-js", 0], "source": ["obj-in", 0]}},
+        {"patchline": {"destination": ["obj-js", 0], "source": ["obj-in", 1]}},
         # obj-js -> live.miditool.out
         {"patchline": {"destination": ["obj-out", 0], "source": ["obj-js", 0]}},
-        # Control routings
-        {"patchline": {"destination": ["obj-prep-preset", 0], "source": ["obj-menu-preset", 1]}},
+        # Control routings: outlet 0 (integer index) -> prepend -> obj-js
+        {"patchline": {"destination": ["obj-prep-preset", 0], "source": ["obj-menu-preset", 0]}},
         {"patchline": {"destination": ["obj-js", 0], "source": ["obj-prep-preset", 0]}},
-        {"patchline": {"destination": ["obj-prep-voicing", 0], "source": ["obj-menu-voicing", 1]}},
+        {"patchline": {"destination": ["obj-prep-voicing", 0], "source": ["obj-menu-voicing", 0]}},
         {"patchline": {"destination": ["obj-js", 0], "source": ["obj-prep-voicing", 0]}},
-        {"patchline": {"destination": ["obj-prep-groove", 0], "source": ["obj-menu-groove", 1]}},
+        {"patchline": {"destination": ["obj-prep-groove", 0], "source": ["obj-menu-groove", 0]}},
         {"patchline": {"destination": ["obj-js", 0], "source": ["obj-prep-groove", 0]}},
         {"patchline": {"destination": ["obj-prep-octave", 0], "source": ["obj-num-oct", 0]}},
         {"patchline": {"destination": ["obj-js", 0], "source": ["obj-prep-octave", 0]}},
@@ -987,8 +1035,15 @@ def get_midison_generator_patcher() -> dict[str, Any]:
         {"patchline": {"destination": ["obj-js", 0], "source": ["obj-prep-lead", 0]}},
         {"patchline": {"destination": ["obj-prep-rootless", 0], "source": ["obj-btn-rootless", 0]}},
         {"patchline": {"destination": ["obj-js", 0], "source": ["obj-prep-rootless", 0]}},
-        {"patchline": {"destination": ["obj-trigger-gen", 0], "source": ["obj-btn-generate", 0]}},
-        {"patchline": {"destination": ["obj-js", 0], "source": ["obj-trigger-gen", 0]}},
+        # Parameter changes trigger bang into obj-trigger-in -> live.miditool.in
+        {"patchline": {"destination": ["obj-trigger-in", 0], "source": ["obj-menu-preset", 0]}},
+        {"patchline": {"destination": ["obj-trigger-in", 0], "source": ["obj-menu-voicing", 0]}},
+        {"patchline": {"destination": ["obj-trigger-in", 0], "source": ["obj-menu-groove", 0]}},
+        {"patchline": {"destination": ["obj-trigger-in", 0], "source": ["obj-num-oct", 0]}},
+        {"patchline": {"destination": ["obj-trigger-in", 0], "source": ["obj-btn-human", 0]}},
+        {"patchline": {"destination": ["obj-trigger-in", 0], "source": ["obj-btn-lead", 0]}},
+        {"patchline": {"destination": ["obj-trigger-in", 0], "source": ["obj-btn-rootless", 0]}},
+        {"patchline": {"destination": ["obj-in", 0], "source": ["obj-trigger-in", 0]}},
     ]
 
     return {
@@ -1003,7 +1058,7 @@ def get_midison_generator_patcher() -> dict[str, Any]:
             },
             "classnamespace": "box",
             "rect": [100.0, 100.0, 520.0, 600.0],
-            "openrect": [0.0, 0.0, 152.0, 265.0],
+            "openrect": [0.0, 0.0, 152.0, 144.0],
             "openinpresentation": 1,
             "default_fontsize": 10.0,
             "default_fontname": "Arial Bold",

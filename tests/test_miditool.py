@@ -1,5 +1,5 @@
 """
-Unit tests for Ableton Live 12 MIDI Tool and AMXD builder (banjo.miditool).
+Unit tests for Ableton Live 12 MIDI Tool and AMXD builder (midison.miditool).
 """
 
 from pathlib import Path
@@ -58,7 +58,7 @@ def test_create_amxd_container_header_and_format():
 
 
 def test_build_amxd_device_writes_valid_file(tmp_path):
-    dest = tmp_path / "Banjo Test.amxd"
+    dest = tmp_path / "Midison Test.amxd"
     out = build_amxd_device(dest)
 
     assert out.exists()
@@ -89,6 +89,7 @@ def test_generator_patcher_presentation_and_controls():
 
     assert p["openinpresentation"] == 1
     assert p["openrect"][2] == 152.0  # Standard Live 12 panel width
+    assert p["openrect"][3] == 144.0  # Standard Live 12 panel height without clipping
 
     box_ids = {b["box"]["id"]: b["box"] for b in p["boxes"]}
 
@@ -115,18 +116,23 @@ def test_generator_patcher_presentation_and_controls():
     assert box_ids["obj-btn-lead"]["maxclass"] == "live.text"
     assert "obj-btn-rootless" in box_ids
     assert box_ids["obj-btn-rootless"]["maxclass"] == "live.text"
-    assert "obj-btn-generate" in box_ids
-    assert box_ids["obj-btn-generate"]["maxclass"] == "live.text"
 
-    # Presentation rects on all interactive widgets
+    # Presentation rects on all interactive widgets, and ensure all fit within 144px
     interactive_ids = [
         "obj-menu-preset", "obj-menu-voicing", "obj-menu-groove",
-        "obj-num-oct", "obj-btn-human", "obj-btn-lead", "obj-btn-rootless", "obj-btn-generate"
+        "obj-num-oct", "obj-btn-human", "obj-btn-lead", "obj-btn-rootless"
     ]
     for bid in interactive_ids:
         box = box_ids[bid]
         assert box.get("presentation") == 1
         assert "presentation_rect" in box
+        rect = box["presentation_rect"]
+        bottom_y = rect[1] + rect[3]
+        assert bottom_y <= 144.0, f"{bid} exceeds 144px height (bottom: {bottom_y})"
+
+    # Vertical limit line is at 144px
+    assert "obj-vert-limit" in box_ids
+    assert box_ids["obj-vert-limit"]["presentation_rect"][1] == 144.0
 
     # Verify lines
     lines = p["lines"]
@@ -134,6 +140,7 @@ def test_generator_patcher_presentation_and_controls():
     dest_set = {line["patchline"]["destination"][0] for line in lines}
     assert "obj-js" in dest_set
     assert "obj-out" in dest_set
+    assert "obj-in" in dest_set
 
 
 def test_generator_embedded_js_syntax():
@@ -141,7 +148,10 @@ def test_generator_embedded_js_syntax():
     from midison.miditool import MIDISON_GENERATOR_JS
 
     # Check key function names
-    for fn in ["function generate", "function dictionary", "function preset", "function voicing", "function groove"]:
+    for fn in [
+        "function generate", "function dictionary", "function preset",
+        "function preset_idx", "function voicing", "function groove"
+    ]:
         assert fn in MIDISON_GENERATOR_JS
 
     # Validate JavaScript syntax with Node
@@ -159,6 +169,7 @@ def test_generator_embedded_js_syntax():
 
     // Call handlers to verify no runtime syntax/reference errors
     preset(0);
+    preset_idx(3);
     voicing("Drop 2");
     groove("Charleston");
     octave(3);
@@ -169,4 +180,58 @@ def test_generator_embedded_js_syntax():
     """
     res = subprocess.run(["node", "-e", script], capture_output=True, text=True)
     assert res.returncode == 0, f"Node syntax validation failed: {res.stderr}"
+
+
+def test_generator_js_musical_timing_and_chords():
+    """Verify that selecting preset 3 (i7 - iv7 - v7 - i7) produces 4 chords across 16 beats."""
+    import json
+    import subprocess
+    from midison.miditool import MIDISON_GENERATOR_JS
+
+    script = f"""
+    var outputPayload = null;
+    function Dict(name) {{
+        this.name = name || "d1";
+        this.contains = function() {{ return false; }};
+        this.get = function() {{ return null; }};
+        this.parse = function(jsonStr) {{
+            outputPayload = JSON.parse(jsonStr);
+        }};
+    }}
+    function outlet(idx, type, val) {{}}
+
+    {MIDISON_GENERATOR_JS}
+
+    // Select preset 3: i7 - iv7 - v7 - i7
+    preset_idx(3);
+    voicing("Drop 2");
+    groove("Strum");
+    generate();
+
+    console.log(JSON.stringify(outputPayload));
+    """
+    res = subprocess.run(["node", "-e", script], capture_output=True, text=True)
+    assert res.returncode == 0, f"Node failed: {res.stderr}"
+
+    payload = json.loads(res.stdout)
+    assert "notes" in payload
+    notes = payload["notes"]
+    assert len(notes) >= 16  # 4 chords * 4 notes
+
+    # Group notes by start_time integer bar:
+    # Bar 1 (0..4), Bar 2 (4..8), Bar 3 (8..12), Bar 4 (12..16)
+    chord0_notes = [n for n in notes if n["start_time"] < 2.0]
+    chord1_notes = [n for n in notes if 3.9 < n["start_time"] < 6.0]
+    chord2_notes = [n for n in notes if 7.9 < n["start_time"] < 10.0]
+    chord3_notes = [n for n in notes if 11.9 < n["start_time"] < 14.0]
+
+    assert len(chord0_notes) == 4
+    assert len(chord1_notes) == 4
+    assert len(chord2_notes) == 4
+    assert len(chord3_notes) == 4
+
+    # Strum durations should sustain across the bar (> 3.5 beats)
+    for n in chord0_notes:
+        assert n["duration"] > 3.5
+
 

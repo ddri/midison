@@ -1,5 +1,5 @@
 """
-Shared note event generator for Banjo.
+Shared note event generator for Midison.
 
 Translates high-level chord progression requests into deterministic,
 timed MIDI note events (pitch, start_beat, duration_beats, velocity).
@@ -72,7 +72,7 @@ def resolve_progression_notes(request: GenerationRequest) -> ResolvedProgression
     Fully accounts for key, mode, inversions, voice leading, voicings, rootless,
     octave limits, and groove pulse patterns.
     """
-    rng = random.Random(request.seed) if request.seed is not None else random.Random()
+    rng = random.Random(request.seed) if request.seed is not None else random.Random()  # nosec B311
     key_pc = parse_pitch_class(request.key_center)
 
     resolved_chords: list[tuple[ChordSpec, ParsedNumeral, ResolvedChord, list[int]]] = []

@@ -21,7 +21,7 @@ uv pip install -e ".[dev]"
 uv run pytest
 ```
 
-173 tests covering the parser, chord builder, voicings, voice leading, grooves, virtual MIDI streaming, AbletonOSC injection, Live 12 MIDI Tools, MIDI writer, config, CLI, and MCP server.
+187 tests covering the parser, chord builder, voicings, voice leading, grooves, virtual MIDI streaming, AbletonOSC injection, Live 12 MIDI Tools, MIDI writer, config, CLI, and MCP server.
 
 ## Command-line interface
 
@@ -110,11 +110,12 @@ midison-corpus --output-dir ~/Music/midison-test
 }
 ```
 
-Restart your MCP host after configuring. The five tools will appear.
+Restart your MCP host after configuring. The six tools will appear.
 
 ### Tools
 
 * **`generate_midi_progression`**: Generates a `.mid` file and `.md` sidecar from a Roman numeral progression.
+* **`get_ableton_session_state`**: Queries active Ableton Live session tempo, time signature, selected track, and clip slot.
 * **`send_to_ableton`**: Directly injects a progression into an active Ableton Live track and clip slot via AbletonOSC (zero drag-and-drop).
 * **`stream_to_midi_port`**: Streams notes in real-time to a macOS CoreMIDI virtual port (`"Midison"`) to audition through armed VST instruments live.
 * **`install_ableton_integrations`**: Automatically installs AbletonOSC and the Live 12 Max Generator into your Ableton User Library.

@@ -69,7 +69,8 @@ def choose_voicing_position(
                 best_inv = inv_idx
                 best_key = tie_key
 
-    assert best_notes is not None and best_inv is not None
+    if best_notes is None or best_inv is None:
+        raise RuntimeError("Failed to compute valid voice leading candidates.")
     return best_inv, best_notes
 
 
