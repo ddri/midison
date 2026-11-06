@@ -292,7 +292,7 @@ def test_list_tools_returns_all_tools():
         "list_vibes",
     }
     # Schemas are non-trivial.
-    schemas = {t.name: t.inputSchema for t in tools}
+    schemas = {t.name: t.input_schema for t in tools}
     assert schemas["generate_midi_progression"]["required"] == [
         "key_center",
         "scale_type",
