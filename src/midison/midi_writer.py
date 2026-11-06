@@ -14,16 +14,9 @@ from pathlib import Path
 
 import mido
 
+from midison.events import _calc_velocity, resolve_chords
 from midison.grooves import get_groove, select_voices, tile_groove_pulses
-from midison.theory import (
-    ParsedNumeral,
-    build_chord,
-    midi_note_name,
-    parse_pitch_class,
-    parse_roman_numeral,
-)
-from midison.voice_leading import build_candidates, choose_voicing_position
-from midison.voicings import VoicingName, apply_voicing
+from midison.voicings import VoicingName
 
 TICKS_PER_BEAT = 480  # standard PPQN
 
@@ -85,64 +78,7 @@ def generate(request: GenerationRequest, output_dir: Path) -> GenerationResult:
 
     rng = random.Random(request.seed) if request.seed is not None else random.Random()  # nosec B311
 
-    key_pc = parse_pitch_class(request.key_center)
-
-    # Resolve every chord into MIDI notes.
-    resolved_chords: list[tuple[ChordSpec, ParsedNumeral, list[int]]] = []
-    previous_voiced: list[int] | None = None
-    for spec in request.chords:
-        parsed = parse_roman_numeral(spec.numeral)
-        # Track explicitness BEFORE overriding so voice leading respects user intent.
-        # spec.inversion=0 counts as explicit (user named root deliberately, per MCP
-        # schema "omit this" guidance); only None means "implicit, optimizer free to pick".
-        explicit_inversion = (
-            parsed.inversion > 0
-            or spec.inversion is not None
-            or parsed.has_bass_override
-        )
-        if spec.inversion is not None:
-            parsed.inversion = spec.inversion
-        chord = build_chord(parsed, key_pc, request.scale_type, octave=request.octave)
-
-        # Step 1-2: apply voicing (voice-led or direct)
-        if request.voice_lead and previous_voiced is not None:
-            candidates = build_candidates(
-                parsed,
-                key_pc,
-                request.scale_type,
-                request.octave,
-                spec.voicing,
-                explicit_inversion=explicit_inversion,
-            )
-            chosen_inv, voiced = choose_voicing_position(candidates, previous_voiced)
-            # Update parsed.inversion so the resolved metadata reports the
-            # actually-chosen inversion (not the original parse value, which
-            # build_candidates did not mutate).
-            parsed.inversion = chosen_inv
-        else:
-            voiced = apply_voicing(
-                list(chord.midi_notes), spec.voicing, bass_pc=chord.bass_pc
-            )
-
-        # Step 3: rootless — strip root after voice leading so VL sees the full chord
-        if spec.rootless:
-            voiced = apply_voicing(
-                voiced, "rootless", bass_pc=chord.bass_pc, root_pc=chord.root_pc
-            )
-
-        # Step 4: max_octave clamp — hard ceiling applied last
-        voiced = _clamp_to_max_octave(voiced, request.max_octave)
-
-        resolved_chords.append((spec, parsed, voiced))
-        previous_voiced = voiced
-
-    # Pre-compute beat offsets once; both the metadata loop and MIDI event loop use them.
-    beat_offsets: list[float] = []
-    _beat = 0.0
-    for spec, *_ in resolved_chords:
-        beat_offsets.append(_beat)
-        _beat += spec.duration_beats
-    total_beats = _beat
+    resolved = resolve_chords(request)
 
     # Write the MIDI file.
     filename = request.filename or _auto_filename(request, generated_at)
@@ -170,22 +106,6 @@ def generate(request: GenerationRequest, output_dir: Path) -> GenerationResult:
         )
     )
 
-    # Build resolved metadata for each chord.
-    resolved_metadata: list[dict] = []
-    for i, (spec, parsed, voiced) in enumerate(resolved_chords):
-        resolved_metadata.append(
-            {
-                "numeral": spec.numeral,
-                "notes": [midi_note_name(n) for n in voiced],
-                "midi": list(voiced),
-                "start_beat": beat_offsets[i],
-                "duration_beats": spec.duration_beats,
-                "voicing": spec.voicing,
-                "inversion": parsed.inversion,
-                "pattern": spec.pattern,
-            }
-        )
-
     # Emit MIDI events using absolute ticks, then convert to delta times.
     seconds_per_beat = 60.0 / request.bpm
     ticks_per_ms = TICKS_PER_BEAT / (seconds_per_beat * 1000.0)
@@ -193,9 +113,10 @@ def generate(request: GenerationRequest, output_dir: Path) -> GenerationResult:
     all_events: list[tuple[int, int, str, int, int]] = []
     # (abs_tick, ordering_key, type, note, velocity); ordering_key ensures
     # off-events at the same tick precede on-events.
-    for i, (spec, parsed, voiced) in enumerate(resolved_chords):
+    for vc in resolved.chords:
+        spec, voiced = vc.spec, vc.notes
         duration_ticks = round(spec.duration_beats * TICKS_PER_BEAT)
-        chord_start_tick = round(beat_offsets[i] * TICKS_PER_BEAT)
+        chord_start_tick = round(vc.start_beat * TICKS_PER_BEAT)
 
         pattern = spec.pattern
         if pattern == "strum" and len(voiced) > 1:
@@ -273,25 +194,15 @@ def generate(request: GenerationRequest, output_dir: Path) -> GenerationResult:
     # Sidecar.
     sidecar_path = midi_path.with_suffix(".md")
     sidecar_path.write_text(
-        _render_sidecar(request, resolved_metadata, midi_path.name, generated_at)
+        _render_sidecar(request, resolved.metadata, midi_path.name, generated_at)
     )
 
     return GenerationResult(
         filepath=midi_path,
         sidecar_path=sidecar_path,
-        resolved=resolved_metadata,
-        total_beats=total_beats,
+        resolved=resolved.metadata,
+        total_beats=resolved.total_beats,
     )
-
-
-def _calc_velocity(
-    humanize: HumanizeSpec, rng: random.Random, velocity_scale: float = 1.0
-) -> int:
-    base = humanize.base_velocity * velocity_scale
-    velocity = round(base)
-    if humanize.velocity_range > 0:
-        velocity += rng.randint(-humanize.velocity_range, humanize.velocity_range)
-    return max(1, min(127, velocity))
 
 
 def _calc_timing_offset(
@@ -301,20 +212,6 @@ def _calc_timing_offset(
         offset_ms = rng.randint(-humanize.timing_ms, humanize.timing_ms)
         return round(offset_ms * ticks_per_ms)
     return 0
-
-
-def _clamp_to_max_octave(notes: list[int], max_octave: int) -> list[int]:
-    """Shift notes down by whole octaves until the lowest note is within max_octave.
-
-    Uses Ableton convention: C3 = MIDI 60, so octave N lowest note = 12*(N+2).
-    """
-    if not notes:
-        return notes
-    lowest_octave = (min(notes) // 12) - 2  # Ableton: C3=60 → (60//12)-2 = 3
-    if lowest_octave > max_octave:
-        shift = (lowest_octave - max_octave) * 12
-        return [n - shift for n in notes]
-    return notes
 
 
 def _auto_filename(request: GenerationRequest, generated_at: datetime) -> str:

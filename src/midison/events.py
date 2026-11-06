@@ -48,13 +48,18 @@ class ResolvedProgression:
 
 
 def _clamp_to_max_octave(notes: list[int], max_octave: int) -> list[int]:
-    max_midi = (max_octave + 1) * 12 + 11
-    clamped: list[int] = []
-    for n in notes:
-        while n > max_midi:
-            n -= 12
-        clamped.append(n)
-    return clamped
+    """Shift notes down by whole octaves until the lowest note is within max_octave.
+
+    The chord moves as a unit so its voicing is preserved. Uses Ableton
+    convention: C3 = MIDI 60, so octave N lowest note = 12*(N+2).
+    """
+    if not notes:
+        return notes
+    lowest_octave = (min(notes) // 12) - 2  # Ableton: C3=60 -> (60//12)-2 = 3
+    if lowest_octave > max_octave:
+        shift = (lowest_octave - max_octave) * 12
+        return [n - shift for n in notes]
+    return notes
 
 
 def _calc_velocity(
@@ -67,20 +72,47 @@ def _calc_velocity(
     return max(1, min(127, velocity))
 
 
-def resolve_progression_notes(request: GenerationRequest) -> ResolvedProgression:
+@dataclass(frozen=True)
+class VoicedChord:
+    """One chord after voicing, voice leading, rootless and octave clamp."""
+
+    spec: ChordSpec
+    parsed: ParsedNumeral
+    notes: list[int]
+    start_beat: float
+
+
+@dataclass(frozen=True)
+class ResolvedChords:
+    """Every chord of a request, voiced and placed on the beat grid."""
+
+    chords: list[VoicedChord]
+    metadata: list[dict]
+    total_beats: float
+
+
+def resolve_chords(request: GenerationRequest) -> ResolvedChords:
     """
-    Resolves a GenerationRequest into timed MIDI note events and chord metadata.
-    Fully accounts for key, mode, inversions, voice leading, voicings, rootless,
-    octave limits, and groove pulse patterns.
+    Voice every chord in a request. This is the single source of truth for
+    which pitches each chord gets; the .mid writer and every live output
+    (Ableton, streaming, Max for Live, songs) render from it.
+
+    Pipeline per chord: parse, apply explicit inversion, voice (or voice-lead
+    against the previous chord), strip the root if rootless, clamp to
+    max_octave. Draws no random numbers, so callers' seeded RNG sequences
+    are unaffected.
     """
-    rng = random.Random(request.seed) if request.seed is not None else random.Random()  # nosec B311
     key_pc = parse_pitch_class(request.key_center)
 
-    resolved_chords: list[tuple[ChordSpec, ParsedNumeral, list[int]]] = []
+    chords: list[VoicedChord] = []
     previous_voiced: list[int] | None = None
+    beat = 0.0
 
     for spec in request.chords:
         parsed = parse_roman_numeral(spec.numeral)
+        # Track explicitness BEFORE overriding so voice leading respects user
+        # intent. spec.inversion=0 counts as explicit (user named root
+        # deliberately); only None means the optimizer is free to pick.
         explicit_inversion = (
             parsed.inversion > 0
             or spec.inversion is not None
@@ -100,48 +132,59 @@ def resolve_progression_notes(request: GenerationRequest) -> ResolvedProgression
                 explicit_inversion=explicit_inversion,
             )
             chosen_inv, voiced = choose_voicing_position(candidates, previous_voiced)
+            # Report the inversion voice leading actually chose.
             parsed.inversion = chosen_inv
         else:
             voiced = apply_voicing(
                 list(chord.midi_notes), spec.voicing, bass_pc=chord.bass_pc
             )
 
+        # Rootless after voice leading, so voice leading sees the full chord.
         if spec.rootless:
             voiced = apply_voicing(
                 voiced, "rootless", bass_pc=chord.bass_pc, root_pc=chord.root_pc
             )
 
+        # max_octave is a hard ceiling, applied last.
         voiced = _clamp_to_max_octave(voiced, request.max_octave)
-        resolved_chords.append((spec, parsed, voiced))
-        previous_voiced = voiced
 
-    beat_offsets: list[float] = []
-    _beat = 0.0
-    for spec, *_ in resolved_chords:
-        beat_offsets.append(_beat)
-        _beat += spec.duration_beats
-    total_beats = _beat
-
-    resolved_metadata: list[dict] = []
-    for i, (spec, parsed, voiced) in enumerate(resolved_chords):
-        resolved_metadata.append(
-            {
-                "numeral": spec.numeral,
-                "notes": [midi_note_name(n) for n in voiced],
-                "midi": list(voiced),
-                "start_beat": beat_offsets[i],
-                "duration_beats": spec.duration_beats,
-                "voicing": spec.voicing,
-                "inversion": parsed.inversion,
-                "pattern": spec.pattern,
-            }
+        chords.append(
+            VoicedChord(spec=spec, parsed=parsed, notes=voiced, start_beat=beat)
         )
+        previous_voiced = voiced
+        beat += spec.duration_beats
+
+    metadata = [
+        {
+            "numeral": c.spec.numeral,
+            "notes": [midi_note_name(n) for n in c.notes],
+            "midi": list(c.notes),
+            "start_beat": c.start_beat,
+            "duration_beats": c.spec.duration_beats,
+            "voicing": c.spec.voicing,
+            "inversion": c.parsed.inversion,
+            "pattern": c.spec.pattern,
+        }
+        for c in chords
+    ]
+    return ResolvedChords(chords=chords, metadata=metadata, total_beats=beat)
+
+
+def resolve_progression_notes(request: GenerationRequest) -> ResolvedProgression:
+    """
+    Resolves a GenerationRequest into timed MIDI note events and chord metadata.
+    Fully accounts for key, mode, inversions, voice leading, voicings, rootless,
+    octave limits, and groove pulse patterns.
+    """
+    rng = random.Random(request.seed) if request.seed is not None else random.Random()  # nosec B311
+    resolved = resolve_chords(request)
 
     timed_notes: list[TimedNote] = []
     seconds_per_beat = 60.0 / request.bpm
 
-    for i, (spec, parsed, voiced) in enumerate(resolved_chords):
-        chord_start_beat = beat_offsets[i]
+    for vc in resolved.chords:
+        spec, voiced = vc.spec, vc.notes
+        chord_start_beat = vc.start_beat
         chord_duration = spec.duration_beats
         pattern = spec.pattern
 
@@ -215,6 +258,6 @@ def resolve_progression_notes(request: GenerationRequest) -> ResolvedProgression
 
     return ResolvedProgression(
         notes=timed_notes,
-        resolved_metadata=resolved_metadata,
-        total_beats=total_beats,
+        resolved_metadata=resolved.metadata,
+        total_beats=resolved.total_beats,
     )
