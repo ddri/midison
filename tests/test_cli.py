@@ -77,17 +77,26 @@ class TestCliMain:
         assert len(md_files) == 1
 
     def test_custom_flags(self, tmp_path: Path, capsys):
-        exit_code = main([
-            "i - iv - V7",
-            "--key", "A",
-            "--mode", "minor",
-            "--bpm", "90",
-            "--pattern", "arpeggio_up",
-            "--voicing", "drop2",
-            "--voice-lead",
-            "--filename", "test_custom_clip",
-            "--output-dir", str(tmp_path),
-        ])
+        exit_code = main(
+            [
+                "i - iv - V7",
+                "--key",
+                "A",
+                "--mode",
+                "minor",
+                "--bpm",
+                "90",
+                "--pattern",
+                "arpeggio_up",
+                "--voicing",
+                "drop2",
+                "--voice-lead",
+                "--filename",
+                "test_custom_clip",
+                "--output-dir",
+                str(tmp_path),
+            ]
+        )
         assert exit_code == 0
 
         mid_file = tmp_path / "test_custom_clip.mid"
@@ -121,7 +130,10 @@ class TestCliMain:
 
     def test_install_ableton_osc_flag(self, capsys, monkeypatch):
         from unittest.mock import patch
-        with patch("midison.cli.install_ableton_osc", return_value=Path("/mock/AbletonOSC")):
+
+        with patch(
+            "midison.cli.install_ableton_osc", return_value=Path("/mock/AbletonOSC")
+        ):
             exit_code = main(["--install-ableton-osc"])
         assert exit_code == 0
         captured = capsys.readouterr()
@@ -129,7 +141,11 @@ class TestCliMain:
 
     def test_install_m4l_flag(self, capsys):
         from unittest.mock import patch
-        with patch("midison.cli.install_m4l_device", return_value=Path("/mock/Midison Generator.amxd")):
+
+        with patch(
+            "midison.cli.install_m4l_device",
+            return_value=Path("/mock/Midison Generator.amxd"),
+        ):
             exit_code = main(["--install-m4l"])
         assert exit_code == 0
         captured = capsys.readouterr()
@@ -141,13 +157,21 @@ class TestCliMain:
         from midison.ableton import AbletonSessionState
 
         mock_client = MagicMock()
-        mock_client.query_session_state.return_value = AbletonSessionState(connected=False)
+        mock_client.query_session_state.return_value = AbletonSessionState(
+            connected=False
+        )
         mock_client.inject_progression.return_value = {
-            "status": "success", "track_index": 0, "clip_index": 0,
-            "total_beats": 4.0, "notes_count": 8, "fired": True,
+            "status": "success",
+            "track_index": 0,
+            "clip_index": 0,
+            "total_beats": 4.0,
+            "notes_count": 8,
+            "fired": True,
         }
         with patch("midison.cli.AbletonClient", return_value=mock_client):
-            exit_code = main(["ii7 - V7", "--to-ableton", "--output-dir", str(tmp_path)])
+            exit_code = main(
+                ["ii7 - V7", "--to-ableton", "--output-dir", str(tmp_path)]
+            )
         assert exit_code == 0
         captured = capsys.readouterr()
         assert "session sync offline" in captured.out
@@ -171,11 +195,17 @@ class TestCliMain:
             scale_name="Major",
         )
         mock_client.inject_progression.return_value = {
-            "status": "success", "track_index": 2, "clip_index": 1,
-            "total_beats": 4.0, "notes_count": 8, "fired": True,
+            "status": "success",
+            "track_index": 2,
+            "clip_index": 1,
+            "total_beats": 4.0,
+            "notes_count": 8,
+            "fired": True,
         }
         with patch("midison.cli.AbletonClient", return_value=mock_client):
-            exit_code = main(["ii7 - V7", "--to-ableton", "--output-dir", str(tmp_path)])
+            exit_code = main(
+                ["ii7 - V7", "--to-ableton", "--output-dir", str(tmp_path)]
+            )
         assert exit_code == 0
         captured = capsys.readouterr()
         assert "⚡ Synced with Ableton Live: 126.0 BPM (4/4)" in captured.out
@@ -201,14 +231,28 @@ class TestCliMain:
             selected_scene=0,
         )
         mock_client.inject_progression.return_value = {
-            "status": "success", "track_index": 5, "clip_index": 3,
-            "total_beats": 4.0, "notes_count": 8, "fired": True,
+            "status": "success",
+            "track_index": 5,
+            "clip_index": 3,
+            "total_beats": 4.0,
+            "notes_count": 8,
+            "fired": True,
         }
         with patch("midison.cli.AbletonClient", return_value=mock_client):
-            exit_code = main([
-                "ii7 - V7", "--to-ableton", "-b", "145", "--track", "5", "--clip", "3",
-                "--output-dir", str(tmp_path)
-            ])
+            exit_code = main(
+                [
+                    "ii7 - V7",
+                    "--to-ableton",
+                    "-b",
+                    "145",
+                    "--track",
+                    "5",
+                    "--clip",
+                    "3",
+                    "--output-dir",
+                    str(tmp_path),
+                ]
+            )
         assert exit_code == 0
         captured = capsys.readouterr()
         assert "Target: Track 6 (idx 5), Clip Slot 4 (idx 3)" in captured.out
@@ -220,6 +264,7 @@ class TestCliMain:
 
     def test_play_stream_flag(self, capsys, tmp_path):
         from unittest.mock import patch
+
         with patch("midison.cli.stream_progression") as mock_stream:
             exit_code = main(["ii7 - V7", "--play", "--output-dir", str(tmp_path)])
         assert exit_code == 0
@@ -251,7 +296,9 @@ class TestCliMain:
         assert "Dreamy Lo-Fi Nostalgia" in captured.out
 
     def test_cli_vibe_generation(self, capsys, tmp_path):
-        exit_code = main(["--vibe", "melancholy_city_pop", "--output-dir", str(tmp_path)])
+        exit_code = main(
+            ["--vibe", "melancholy_city_pop", "--output-dir", str(tmp_path)]
+        )
         assert exit_code == 0
         captured = capsys.readouterr()
         assert "Applying Vibe: Melancholy City Pop" in captured.out
@@ -272,4 +319,3 @@ class TestCliMain:
         assert "Generated Song Arrangement: City Pop" in captured.out
         assert "Verse" in captured.out
         assert "Chorus" in captured.out
-

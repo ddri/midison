@@ -34,9 +34,10 @@ PatternName = str  # 'block', 'strum', 'arpeggio_up', 'charleston', 'bossa', etc
 @dataclass
 class ChordSpec:
     """Per-chord input to the writer."""
+
     numeral: str
     duration_beats: float
-    inversion: int | None = None       # overrides parsed inversion if set
+    inversion: int | None = None  # overrides parsed inversion if set
     voicing: VoicingName = "close"
     rootless: bool = False
     pattern: PatternName = "block"
@@ -44,8 +45,8 @@ class ChordSpec:
 
 @dataclass
 class HumanizeSpec:
-    velocity_range: int = 0    # max +/- deviation from base_velocity
-    timing_ms: int = 0         # max +/- deviation in milliseconds
+    velocity_range: int = 0  # max +/- deviation from base_velocity
+    timing_ms: int = 0  # max +/- deviation in milliseconds
     base_velocity: int = 80
 
 
@@ -88,7 +89,9 @@ def generate(request: GenerationRequest, output_dir: Path) -> GenerationResult:
     key_pc = parse_pitch_class(request.key_center)
 
     # Resolve every chord into MIDI notes.
-    resolved_chords: list[tuple[ChordSpec, ParsedNumeral, ResolvedChord, list[int]]] = []
+    resolved_chords: list[
+        tuple[ChordSpec, ParsedNumeral, ResolvedChord, list[int]]
+    ] = []
     previous_voiced: list[int] | None = None
     for spec in request.chords:
         parsed = parse_roman_numeral(spec.numeral)
@@ -107,8 +110,12 @@ def generate(request: GenerationRequest, output_dir: Path) -> GenerationResult:
         # Step 1-2: apply voicing (voice-led or direct)
         if request.voice_lead and previous_voiced is not None:
             candidates = build_candidates(
-                parsed, key_pc, request.scale_type, request.octave,
-                spec.voicing, explicit_inversion,
+                parsed,
+                key_pc,
+                request.scale_type,
+                request.octave,
+                spec.voicing,
+                explicit_inversion,
             )
             chosen_inv, voiced = choose_voicing_position(candidates, previous_voiced)
             # Update parsed.inversion so the resolved metadata reports the
@@ -116,7 +123,9 @@ def generate(request: GenerationRequest, output_dir: Path) -> GenerationResult:
             # build_candidates did not mutate).
             parsed.inversion = chosen_inv
         else:
-            voiced = apply_voicing(list(chord.midi_notes), spec.voicing, bass_pc=chord.bass_pc)
+            voiced = apply_voicing(
+                list(chord.midi_notes), spec.voicing, bass_pc=chord.bass_pc
+            )
 
         # Step 3: rootless — strip root after voice leading so VL sees the full chord
         if spec.rootless:
@@ -147,30 +156,36 @@ def generate(request: GenerationRequest, output_dir: Path) -> GenerationResult:
     mid.tracks.append(track)
 
     # Tempo + time signature meta-events.
-    track.append(mido.MetaMessage("set_tempo", tempo=mido.bpm2tempo(request.bpm), time=0))
+    track.append(
+        mido.MetaMessage("set_tempo", tempo=mido.bpm2tempo(request.bpm), time=0)
+    )
     num, den = (int(x) for x in request.time_signature.split("/"))
-    track.append(mido.MetaMessage(
-        "time_signature",
-        numerator=num,
-        denominator=den,
-        clocks_per_click=24,
-        notated_32nd_notes_per_beat=8,
-        time=0,
-    ))
+    track.append(
+        mido.MetaMessage(
+            "time_signature",
+            numerator=num,
+            denominator=den,
+            clocks_per_click=24,
+            notated_32nd_notes_per_beat=8,
+            time=0,
+        )
+    )
 
     # Build resolved metadata for each chord.
     resolved_metadata: list[dict] = []
     for i, (spec, parsed, chord, voiced) in enumerate(resolved_chords):
-        resolved_metadata.append({
-            "numeral": spec.numeral,
-            "notes": [midi_note_name(n) for n in voiced],
-            "midi": list(voiced),
-            "start_beat": beat_offsets[i],
-            "duration_beats": spec.duration_beats,
-            "voicing": spec.voicing,
-            "inversion": parsed.inversion,
-            "pattern": spec.pattern,
-        })
+        resolved_metadata.append(
+            {
+                "numeral": spec.numeral,
+                "notes": [midi_note_name(n) for n in voiced],
+                "midi": list(voiced),
+                "start_beat": beat_offsets[i],
+                "duration_beats": spec.duration_beats,
+                "voicing": spec.voicing,
+                "inversion": parsed.inversion,
+                "pattern": spec.pattern,
+            }
+        )
 
     # Emit MIDI events using absolute ticks, then convert to delta times.
     seconds_per_beat = 60.0 / request.bpm
@@ -198,7 +213,11 @@ def generate(request: GenerationRequest, output_dir: Path) -> GenerationResult:
                 all_events.append((off_tick, 0, "off", note, 0))
 
         elif pattern in ("arpeggio_up", "arpeggio_down") and len(voiced) > 0:
-            notes_order = sorted(voiced) if pattern == "arpeggio_up" else sorted(voiced, reverse=True)
+            notes_order = (
+                sorted(voiced)
+                if pattern == "arpeggio_up"
+                else sorted(voiced, reverse=True)
+            )
             step_ticks = duration_ticks / len(notes_order)
             for idx, note in enumerate(notes_order):
                 note_start = chord_start_tick + round(idx * step_ticks)
@@ -219,13 +238,21 @@ def generate(request: GenerationRequest, output_dir: Path) -> GenerationResult:
 
             pulses = tile_groove_pulses(groove, spec.duration_beats)
             for pulse in pulses:
-                p_start_tick = chord_start_tick + round(pulse.beat_offset * TICKS_PER_BEAT)
+                p_start_tick = chord_start_tick + round(
+                    pulse.beat_offset * TICKS_PER_BEAT
+                )
                 p_dur_ticks = round(pulse.duration_beats * TICKS_PER_BEAT)
-                p_end_tick = min(chord_start_tick + duration_ticks, p_start_tick + p_dur_ticks)
+                p_end_tick = min(
+                    chord_start_tick + duration_ticks, p_start_tick + p_dur_ticks
+                )
                 target_notes = select_voices(voiced, pulse.voice_target)
                 for note in target_notes:
-                    velocity = _calc_velocity(request.humanize, rng, velocity_scale=pulse.velocity_scale)
-                    timing_ticks = _calc_timing_offset(request.humanize, rng, ticks_per_ms)
+                    velocity = _calc_velocity(
+                        request.humanize, rng, velocity_scale=pulse.velocity_scale
+                    )
+                    timing_ticks = _calc_timing_offset(
+                        request.humanize, rng, ticks_per_ms
+                    )
                     on_tick = max(0, p_start_tick + timing_ticks)
                     off_tick = max(on_tick + 1, p_end_tick + timing_ticks)
                     all_events.append((on_tick, 1, "on", note, velocity))
@@ -246,7 +273,9 @@ def generate(request: GenerationRequest, output_dir: Path) -> GenerationResult:
 
     # Sidecar.
     sidecar_path = midi_path.with_suffix(".md")
-    sidecar_path.write_text(_render_sidecar(request, resolved_metadata, midi_path.name, generated_at))
+    sidecar_path.write_text(
+        _render_sidecar(request, resolved_metadata, midi_path.name, generated_at)
+    )
 
     return GenerationResult(
         filepath=midi_path,
@@ -256,7 +285,9 @@ def generate(request: GenerationRequest, output_dir: Path) -> GenerationResult:
     )
 
 
-def _calc_velocity(humanize: HumanizeSpec, rng: random.Random, velocity_scale: float = 1.0) -> int:
+def _calc_velocity(
+    humanize: HumanizeSpec, rng: random.Random, velocity_scale: float = 1.0
+) -> int:
     base = humanize.base_velocity * velocity_scale
     velocity = round(base)
     if humanize.velocity_range > 0:
@@ -264,7 +295,9 @@ def _calc_velocity(humanize: HumanizeSpec, rng: random.Random, velocity_scale: f
     return max(1, min(127, velocity))
 
 
-def _calc_timing_offset(humanize: HumanizeSpec, rng: random.Random, ticks_per_ms: float) -> int:
+def _calc_timing_offset(
+    humanize: HumanizeSpec, rng: random.Random, ticks_per_ms: float
+) -> int:
     if humanize.timing_ms > 0:
         offset_ms = rng.randint(-humanize.timing_ms, humanize.timing_ms)
         return round(offset_ms * ticks_per_ms)

@@ -26,8 +26,8 @@ from midison.midi_writer import GenerationRequest
 logger = logging.getLogger("midison.ableton")
 
 DEFAULT_HOST = "127.0.0.1"
-DEFAULT_SEND_PORT = 11000      # AbletonOSC listens here
-DEFAULT_RECEIVE_PORT = 11001   # AbletonOSC replies here
+DEFAULT_SEND_PORT = 11000  # AbletonOSC listens here
+DEFAULT_RECEIVE_PORT = 11001  # AbletonOSC replies here
 
 
 @dataclass
@@ -92,7 +92,11 @@ class AbletonClient:
             sock.bind((self.host, self.receive_port))
             return sock
         except OSError as exc:
-            logger.debug("Failed binding AbletonOSC receive socket on %d: %s", self.receive_port, exc)
+            logger.debug(
+                "Failed binding AbletonOSC receive socket on %d: %s",
+                self.receive_port,
+                exc,
+            )
             sock.close()
             return None
 
@@ -164,9 +168,17 @@ class AbletonClient:
                         state.selected_track = int(params[0])
                     elif addr == "/live/view/get/selected_scene" and params:
                         state.selected_scene = int(params[0])
-                    elif addr == "/live/song/get/root_note" and params and params[0] is not None:
+                    elif (
+                        addr == "/live/song/get/root_note"
+                        and params
+                        and params[0] is not None
+                    ):
                         state.root_note = int(params[0])
-                    elif addr == "/live/song/get/scale_name" and params and params[0] is not None:
+                    elif (
+                        addr == "/live/song/get/scale_name"
+                        and params
+                        and params[0] is not None
+                    ):
                         state.scale_name = str(params[0])
                 except TimeoutError:
                     break
@@ -187,9 +199,13 @@ class AbletonClient:
         """Check if Ableton Live is running and responding to OSC."""
         return self.query_session_state(timeout=timeout).connected
 
-    def create_clip(self, track_index: int, clip_index: int, length_beats: float) -> None:
+    def create_clip(
+        self, track_index: int, clip_index: int, length_beats: float
+    ) -> None:
         """Create a new empty MIDI clip in the specified track and slot."""
-        self.send("/live/clip_slot/create_clip", track_index, clip_index, float(length_beats))
+        self.send(
+            "/live/clip_slot/create_clip", track_index, clip_index, float(length_beats)
+        )
 
     def add_note(
         self,
@@ -321,7 +337,10 @@ def install_ableton_osc(target_dir: Path | None = None) -> Path:
     if target_dir.exists() and (target_dir / ".git").exists():
         # Update existing
         subprocess.run(
-            [git_bin, "-C", str(target_dir), "pull"], check=True, capture_output=True, timeout=60
+            [git_bin, "-C", str(target_dir), "pull"],
+            check=True,
+            capture_output=True,
+            timeout=60,
         )  # nosec B603
     elif target_dir.exists():
         # Directory exists already
@@ -329,7 +348,14 @@ def install_ableton_osc(target_dir: Path | None = None) -> Path:
     else:
         # Clone fresh
         subprocess.run(
-            [git_bin, "clone", "--depth", "1", "https://github.com/ideoforms/AbletonOSC.git", str(target_dir)],
+            [
+                git_bin,
+                "clone",
+                "--depth",
+                "1",
+                "https://github.com/ideoforms/AbletonOSC.git",
+                str(target_dir),
+            ],
             check=True,
             capture_output=True,
             timeout=60,

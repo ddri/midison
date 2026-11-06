@@ -38,10 +38,10 @@ VALID_PATHWAYS = {
 @dataclass
 class ChordSuggestion:
     numeral: str
-    chord_name: str           # e.g. 'Fm7' in C major
-    pathway: str              # 'diatonic', 'secondary_dominant', 'modal_mixture', 'tritone_sub', 'passing'
-    explanation: str          # e.g. 'Minor plagal cadence (borrowed iv): creates a bittersweet, emotional release.'
-    mood_descriptor: str      # e.g. 'Bittersweet / Vulnerable'
+    chord_name: str  # e.g. 'Fm7' in C major
+    pathway: str  # 'diatonic', 'secondary_dominant', 'modal_mixture', 'tritone_sub', 'passing'
+    explanation: str  # e.g. 'Minor plagal cadence (borrowed iv): creates a bittersweet, emotional release.'
+    mood_descriptor: str  # e.g. 'Bittersweet / Vulnerable'
 
 
 def _resolve_root_name(parsed: ParsedNumeral, key_center: str, scale_type: str) -> str:
@@ -149,7 +149,11 @@ def suggest_next_chords(
         # -----------------------------------------------------------------------
         # Major key recommendations
         # -----------------------------------------------------------------------
-        if parsed.degree == 1 and parsed.accidental == 0 and parsed.secondary_of is None:
+        if (
+            parsed.degree == 1
+            and parsed.accidental == 0
+            and parsed.secondary_of is None
+        ):
             # After Tonic (I, Imaj7)
             candidates = [
                 (
@@ -229,7 +233,9 @@ def suggest_next_chords(
                     "Tension / Transition",
                 ),
             ]
-        elif (parsed.degree in (5, 7) and parsed.accidental == 0) or parsed.secondary_of is not None:
+        elif (
+            parsed.degree in (5, 7) and parsed.accidental == 0
+        ) or parsed.secondary_of is not None:
             # After Dominant (V, V7, V13, vii°, secondary dominants)
             candidates = [
                 (
@@ -347,7 +353,11 @@ def suggest_next_chords(
         # -----------------------------------------------------------------------
         # Minor key recommendations
         # -----------------------------------------------------------------------
-        if parsed.degree == 1 and parsed.accidental == 0 and parsed.secondary_of is None:
+        if (
+            parsed.degree == 1
+            and parsed.accidental == 0
+            and parsed.secondary_of is None
+        ):
             # After Minor Tonic (i, i7)
             candidates = [
                 (
@@ -427,7 +437,9 @@ def suggest_next_chords(
                     "Anxious / Thrilling",
                 ),
             ]
-        elif (parsed.degree in (5, 7) and parsed.accidental == 0) or parsed.secondary_of is not None:
+        elif (
+            parsed.degree in (5, 7) and parsed.accidental == 0
+        ) or parsed.secondary_of is not None:
             # After Minor Dominant (V7, v, v7, vii°7, secondary dominants)
             candidates = [
                 (

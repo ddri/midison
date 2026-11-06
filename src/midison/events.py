@@ -58,7 +58,9 @@ def _clamp_to_max_octave(notes: list[int], max_octave: int) -> list[int]:
     return clamped
 
 
-def _calc_velocity(humanize: HumanizeSpec, rng: random.Random, velocity_scale: float = 1.0) -> int:
+def _calc_velocity(
+    humanize: HumanizeSpec, rng: random.Random, velocity_scale: float = 1.0
+) -> int:
     base = humanize.base_velocity * velocity_scale
     velocity = round(base)
     if humanize.velocity_range > 0:
@@ -75,7 +77,9 @@ def resolve_progression_notes(request: GenerationRequest) -> ResolvedProgression
     rng = random.Random(request.seed) if request.seed is not None else random.Random()  # nosec B311
     key_pc = parse_pitch_class(request.key_center)
 
-    resolved_chords: list[tuple[ChordSpec, ParsedNumeral, ResolvedChord, list[int]]] = []
+    resolved_chords: list[
+        tuple[ChordSpec, ParsedNumeral, ResolvedChord, list[int]]
+    ] = []
     previous_voiced: list[int] | None = None
 
     for spec in request.chords:
@@ -101,7 +105,9 @@ def resolve_progression_notes(request: GenerationRequest) -> ResolvedProgression
             chosen_inv, voiced = choose_voicing_position(candidates, previous_voiced)
             parsed.inversion = chosen_inv
         else:
-            voiced = apply_voicing(list(chord.midi_notes), spec.voicing, bass_pc=chord.bass_pc)
+            voiced = apply_voicing(
+                list(chord.midi_notes), spec.voicing, bass_pc=chord.bass_pc
+            )
 
         if spec.rootless:
             voiced = apply_voicing(voiced, "rootless", bass_pc=chord.bass_pc)
@@ -158,7 +164,11 @@ def resolve_progression_notes(request: GenerationRequest) -> ResolvedProgression
                 )
 
         elif pattern in ("arpeggio_up", "arpeggio_down") and len(voiced) > 0:
-            notes_order = sorted(voiced) if pattern == "arpeggio_up" else sorted(voiced, reverse=True)
+            notes_order = (
+                sorted(voiced)
+                if pattern == "arpeggio_up"
+                else sorted(voiced, reverse=True)
+            )
             step_beats = chord_duration / len(notes_order)
             for idx, note in enumerate(notes_order):
                 note_start = chord_start_beat + idx * step_beats
@@ -182,7 +192,10 @@ def resolve_progression_notes(request: GenerationRequest) -> ResolvedProgression
             pulses = tile_groove_pulses(groove, spec.duration_beats)
             for pulse in pulses:
                 pulse_start = chord_start_beat + pulse.beat_offset
-                pulse_end = min(chord_start_beat + chord_duration, pulse_start + pulse.duration_beats)
+                pulse_end = min(
+                    chord_start_beat + chord_duration,
+                    pulse_start + pulse.duration_beats,
+                )
                 pulse_dur = max(0.05, pulse_end - pulse_start)
                 target_notes = select_voices(voiced, pulse.voice_target)
                 for note in target_notes:

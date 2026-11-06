@@ -20,6 +20,7 @@ from midison.theory import (
 # Pitch class basics
 # ---------------------------------------------------------------------------
 
+
 class TestPitchClass:
     def test_natural_notes(self):
         assert parse_pitch_class("C") == 0
@@ -43,8 +44,8 @@ class TestPitchClass:
             parse_pitch_class("H")
 
     def test_midi_note_name(self):
-        assert midi_note_name(60) == "C4"     # middle C
-        assert midi_note_name(69) == "A4"     # A440
+        assert midi_note_name(60) == "C4"  # middle C
+        assert midi_note_name(69) == "A4"  # A440
         assert midi_note_name(48) == "C3"
         assert midi_note_name(72) == "C5"
 
@@ -52,6 +53,7 @@ class TestPitchClass:
 # ---------------------------------------------------------------------------
 # Scales
 # ---------------------------------------------------------------------------
+
 
 class TestScales:
     def test_c_major(self):
@@ -84,6 +86,7 @@ class TestScales:
 # ---------------------------------------------------------------------------
 # Roman numeral parsing
 # ---------------------------------------------------------------------------
+
 
 class TestNumeralParsing:
     def test_basic_major_triad(self):
@@ -188,6 +191,7 @@ class TestNumeralParsing:
 # ---------------------------------------------------------------------------
 # Chord building — these are the tests that catch musically-wrong output
 # ---------------------------------------------------------------------------
+
 
 class TestChordBuilding:
     def test_C_major_I_is_C_major_triad(self):
@@ -304,4 +308,3 @@ class TestChordBuilding:
         assert p2.bass_degree == 5
         chord2 = build_chord(p2, key_pc=0, mode="major", octave=4)
         assert chord2.midi_notes[0] % 12 == 7  # G
-

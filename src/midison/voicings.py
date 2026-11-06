@@ -18,7 +18,9 @@ Voicing definitions follow standard jazz pedagogy:
 
 from __future__ import annotations
 
-VoicingName = str  # one of: 'close', 'drop2', 'drop3', 'drop2and4', 'spread', 'rootless'
+VoicingName = (
+    str  # one of: 'close', 'drop2', 'drop3', 'drop2and4', 'spread', 'rootless'
+)
 
 
 def apply_voicing(
@@ -48,7 +50,11 @@ def apply_voicing(
     else:
         raise ValueError(f"Unknown voicing: {voicing!r}")
 
-    target_pc = bass_pc if bass_pc is not None else (bass_note % 12 if bass_note is not None else None)
+    target_pc = (
+        bass_pc
+        if bass_pc is not None
+        else (bass_note % 12 if bass_note is not None else None)
+    )
     if target_pc is not None:
         result = _anchor_bass(result, target_pc)
 

@@ -61,8 +61,10 @@ def choose_voicing_position(
             shifted = [n + 12 * k for n in voiced]
             score = _voicing_distance(shifted, previous_notes)
             tie_key = (inv_idx, abs(k), k)
-            if best_score is None or score < best_score or (
-                score == best_score and tie_key < best_key
+            if (
+                best_score is None
+                or score < best_score
+                or (score == best_score and tie_key < best_key)
             ):
                 best_score = score
                 best_notes = shifted
@@ -99,7 +101,10 @@ def build_candidates(
     else:
         # Build once at root position to count pre-voicing notes.
         chord_root = build_chord(
-            dataclasses.replace(parsed, inversion=0), key_pc, mode, octave=octave,
+            dataclasses.replace(parsed, inversion=0),
+            key_pc,
+            mode,
+            octave=octave,
         )
         n_pre = len(chord_root.midi_notes)
         max_inv = min(3, n_pre - 1)
@@ -108,7 +113,10 @@ def build_candidates(
     candidates: list[list[int]] = []
     for inv in inversions:
         chord = build_chord(
-            dataclasses.replace(parsed, inversion=inv), key_pc, mode, octave=octave,
+            dataclasses.replace(parsed, inversion=inv),
+            key_pc,
+            mode,
+            octave=octave,
         )
         voiced = apply_voicing(list(chord.midi_notes), voicing, bass_pc=chord.bass_pc)
         candidates.append(voiced)

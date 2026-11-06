@@ -54,7 +54,9 @@ class TestMidiWriter:
 
         # Should contain note_on events
         note_ons = [
-            msg for track in mid.tracks for msg in track
+            msg
+            for track in mid.tracks
+            for msg in track
             if msg.type == "note_on" and msg.velocity > 0
         ]
         assert len(note_ons) == 4  # Cmaj7 has 4 notes
@@ -80,6 +82,7 @@ class TestMidiWriter:
 
     def test_seed_is_reproducible(self, tmp_output: Path):
         """Same seed + same humanization should produce identical files."""
+
         def make_request(seed: int) -> GenerationRequest:
             return GenerationRequest(
                 key_center="C",
@@ -98,7 +101,9 @@ class TestMidiWriter:
         def velocities(path: Path) -> list[int]:
             mid = mido.MidiFile(path)
             return [
-                msg.velocity for track in mid.tracks for msg in track
+                msg.velocity
+                for track in mid.tracks
+                for msg in track
                 if msg.type == "note_on" and msg.velocity > 0
             ]
 
@@ -137,9 +142,12 @@ class TestMidiWriter:
     def test_rootless_false_by_default(self, tmp_output):
         """ChordSpec.rootless defaults to False; all notes including root are present."""
         request = GenerationRequest(
-            key_center="C", scale_type="major", bpm=120,
+            key_center="C",
+            scale_type="major",
+            bpm=120,
             chords=[ChordSpec("I", 4)],  # C major triad: C E G
-            octave=3, filename="test_rootless_default",
+            octave=3,
+            filename="test_rootless_default",
         )
         result = generate(request, tmp_output)
         midi_notes = result.resolved[0]["midi"]
@@ -149,9 +157,12 @@ class TestMidiWriter:
     def test_rootless_true_strips_root(self, tmp_output):
         """ChordSpec with rootless=True omits the root note."""
         request = GenerationRequest(
-            key_center="C", scale_type="major", bpm=120,
+            key_center="C",
+            scale_type="major",
+            bpm=120,
             chords=[ChordSpec("Imaj7", 4, rootless=True)],  # Cmaj7: C E G B
-            octave=3, filename="test_rootless_strips",
+            octave=3,
+            filename="test_rootless_strips",
         )
         result = generate(request, tmp_output)
         midi_notes = result.resolved[0]["midi"]
@@ -162,7 +173,9 @@ class TestMidiWriter:
     def test_default_octave_is_3(self, tmp_output):
         """GenerationRequest.octave defaults to 3."""
         request = GenerationRequest(
-            key_center="C", scale_type="major", bpm=120,
+            key_center="C",
+            scale_type="major",
+            bpm=120,
             chords=[ChordSpec("I", 4)],
             filename="test_default_octave",
         )
@@ -173,9 +186,12 @@ class TestMidiWriter:
     def test_max_octave_clamps_chord_one_octave_above(self, tmp_output):
         """A chord one Ableton octave above max_octave is shifted down by one octave."""
         request = GenerationRequest(
-            key_center="C", scale_type="major", bpm=120,
+            key_center="C",
+            scale_type="major",
+            bpm=120,
             chords=[ChordSpec("I", 4)],
-            octave=7, max_octave=5,
+            octave=7,
+            max_octave=5,
             filename="test_max_octave_clamp_one",
         )
         result = generate(request, tmp_output)
@@ -186,9 +202,12 @@ class TestMidiWriter:
     def test_max_octave_clamps_chord_several_octaves_above(self, tmp_output):
         """A chord several octaves above max_octave is shifted to land at max_octave."""
         request = GenerationRequest(
-            key_center="C", scale_type="major", bpm=120,
+            key_center="C",
+            scale_type="major",
+            bpm=120,
             chords=[ChordSpec("I", 4)],
-            octave=8, max_octave=5,
+            octave=8,
+            max_octave=5,
             filename="test_max_octave_clamp_many",
         )
         result = generate(request, tmp_output)
@@ -199,9 +218,12 @@ class TestMidiWriter:
     def test_max_octave_does_not_clamp_chord_at_limit(self, tmp_output):
         """A chord exactly at max_octave (Ableton convention) passes through unchanged."""
         request = GenerationRequest(
-            key_center="C", scale_type="major", bpm=120,
+            key_center="C",
+            scale_type="major",
+            bpm=120,
             chords=[ChordSpec("I", 4)],
-            octave=6, max_octave=5,
+            octave=6,
+            max_octave=5,
             filename="test_max_octave_no_clamp",
         )
         result = generate(request, tmp_output)
@@ -211,14 +233,18 @@ class TestMidiWriter:
     def test_max_octave_default_is_5(self):
         """GenerationRequest.max_octave defaults to 5."""
         request = GenerationRequest(
-            key_center="C", scale_type="major", bpm=120,
+            key_center="C",
+            scale_type="major",
+            bpm=120,
             chords=[ChordSpec("I", 4)],
         )
         assert request.max_octave == 5
 
     def test_rhythm_patterns_generate_events(self, tmp_output: Path):
         request = GenerationRequest(
-            key_center="C", scale_type="major", bpm=120,
+            key_center="C",
+            scale_type="major",
+            bpm=120,
             chords=[
                 ChordSpec("I", 4, pattern="strum"),
                 ChordSpec("V", 4, pattern="arpeggio_up"),
@@ -237,7 +263,9 @@ class TestMidiWriter:
 
     def test_grooves_generate_midi_events(self, tmp_output: Path):
         request = GenerationRequest(
-            key_center="F", scale_type="major", bpm=100,
+            key_center="F",
+            scale_type="major",
+            bpm=100,
             chords=[
                 ChordSpec("Imaj7", 4, pattern="charleston"),
                 ChordSpec("vi7", 4, pattern="bossa"),
@@ -256,11 +284,17 @@ class TestMidiWriter:
 
         # Verify MIDI note_on events were written
         mid = mido.MidiFile(result.filepath)
-        note_ons = [msg for track in mid.tracks for msg in track if msg.type == "note_on" and msg.velocity > 0]
+        note_ons = [
+            msg
+            for track in mid.tracks
+            for msg in track
+            if msg.type == "note_on" and msg.velocity > 0
+        ]
         assert len(note_ons) > 10
 
     def test_safe_numeral_replaces_sharps_and_pluses(self):
         from midison.midi_writer import _safe_numeral
+
         assert _safe_numeral("#IV") == "sIV"
         assert _safe_numeral("III+") == "IIIaug"
         assert _safe_numeral("V7/vi") == "V7-of-vi"
@@ -270,8 +304,11 @@ class TestVoiceLead:
     def test_voice_lead_defaults_false_unchanged_behavior(self, tmp_path):
         # Without voice_lead, V after I lands at root position close = [67, 71, 74]
         from midison.midi_writer import ChordSpec, GenerationRequest, generate
+
         request = GenerationRequest(
-            key_center="C", scale_type="major", bpm=120,
+            key_center="C",
+            scale_type="major",
+            bpm=120,
             chords=[
                 ChordSpec(numeral="I", duration_beats=4),
                 ChordSpec(numeral="V", duration_beats=4),
@@ -284,8 +321,11 @@ class TestVoiceLead:
     def test_voice_lead_true_picks_smoothest_inversion(self, tmp_path):
         # Worked example: I -> V with voice_lead lands V at 1st inv, k=-1: [59,62,67]
         from midison.midi_writer import ChordSpec, GenerationRequest, generate
+
         request = GenerationRequest(
-            key_center="C", scale_type="major", bpm=120,
+            key_center="C",
+            scale_type="major",
+            bpm=120,
             chords=[
                 ChordSpec(numeral="I", duration_beats=4),
                 ChordSpec(numeral="V", duration_beats=4),
@@ -298,14 +338,20 @@ class TestVoiceLead:
 
     def test_first_chord_unchanged_with_voice_lead(self, tmp_path):
         from midison.midi_writer import ChordSpec, GenerationRequest, generate
+
         spec = ChordSpec(numeral="I", duration_beats=4, voicing="close")
         off = generate(
-            GenerationRequest(key_center="C", scale_type="major", bpm=120, chords=[spec]),
+            GenerationRequest(
+                key_center="C", scale_type="major", bpm=120, chords=[spec]
+            ),
             tmp_path / "off",
         )
         on = generate(
             GenerationRequest(
-                key_center="C", scale_type="major", bpm=120, chords=[spec],
+                key_center="C",
+                scale_type="major",
+                bpm=120,
+                chords=[spec],
                 voice_lead=True,
             ),
             tmp_path / "on",
@@ -329,8 +375,11 @@ class TestVoiceLead:
         (build_chord -> apply_voicing -> shift) is wrong.
         """
         from midison.midi_writer import ChordSpec, GenerationRequest, generate
+
         request = GenerationRequest(
-            key_center="C", scale_type="major", bpm=120,
+            key_center="C",
+            scale_type="major",
+            bpm=120,
             chords=[
                 ChordSpec(numeral="I7", duration_beats=4, voicing="drop2"),
                 ChordSpec(numeral="vi7", duration_beats=4, voicing="drop2"),
@@ -358,8 +407,11 @@ class TestVoiceLead:
         k=0 when inversion is explicit, this test catches it.
         """
         from midison.midi_writer import ChordSpec, GenerationRequest, generate
+
         request = GenerationRequest(
-            key_center="C", scale_type="major", bpm=120,
+            key_center="C",
+            scale_type="major",
+            bpm=120,
             chords=[
                 ChordSpec(numeral="I", duration_beats=4),
                 ChordSpec(numeral="V64", duration_beats=4),
@@ -383,8 +435,11 @@ class TestVoiceLead:
     def test_v13_never_lands_with_extension_in_bass(self, tmp_path):
         """V13's bass note must be a chord tone (R/3/5/7), never an extension (9/11/13)."""
         from midison.midi_writer import ChordSpec, GenerationRequest, generate
+
         request = GenerationRequest(
-            key_center="C", scale_type="major", bpm=120,
+            key_center="C",
+            scale_type="major",
+            bpm=120,
             chords=[
                 ChordSpec(numeral="I", duration_beats=4),
                 ChordSpec(numeral="V13", duration_beats=4),
@@ -407,8 +462,11 @@ class TestVoiceLead:
         only a sanity check that nothing blows up.
         """
         from midison.midi_writer import ChordSpec, GenerationRequest, generate
+
         request = GenerationRequest(
-            key_center="C", scale_type="major", bpm=120,
+            key_center="C",
+            scale_type="major",
+            bpm=120,
             chords=[
                 ChordSpec(numeral="I7", duration_beats=4, voicing="close"),
                 ChordSpec(numeral="ii7", duration_beats=4, rootless=True),
@@ -427,8 +485,11 @@ class TestVoiceLead:
         guaranteed; the score function naturally prefers smaller |k|.
         """
         from midison.midi_writer import ChordSpec, GenerationRequest, generate
+
         request = GenerationRequest(
-            key_center="C", scale_type="major", bpm=120,
+            key_center="C",
+            scale_type="major",
+            bpm=120,
             chords=[
                 ChordSpec(numeral="I", duration_beats=4),
                 ChordSpec(numeral="bIII", duration_beats=4),
@@ -453,7 +514,9 @@ class TestVoiceLead:
 
         def make_request():
             return GenerationRequest(
-                key_center="C", scale_type="major", bpm=120,
+                key_center="C",
+                scale_type="major",
+                bpm=120,
                 chords=[
                     ChordSpec(numeral="I", duration_beats=4),
                     ChordSpec(numeral="vi", duration_beats=4),
@@ -476,8 +539,11 @@ class TestVoiceLead:
         inversion intent.
         """
         from midison.midi_writer import ChordSpec, GenerationRequest, generate
+
         request = GenerationRequest(
-            key_center="C", scale_type="major", bpm=120,
+            key_center="C",
+            scale_type="major",
+            bpm=120,
             chords=[
                 ChordSpec(numeral="vi", duration_beats=4),
                 ChordSpec(numeral="V", duration_beats=4, inversion=1),
@@ -504,8 +570,11 @@ class TestVoiceLead:
         on the voice-led path.
         """
         from midison.midi_writer import ChordSpec, GenerationRequest, generate
+
         request = GenerationRequest(
-            key_center="C", scale_type="major", bpm=120,
+            key_center="C",
+            scale_type="major",
+            bpm=120,
             chords=[
                 ChordSpec(numeral="I", duration_beats=4),
                 ChordSpec(numeral="V", duration_beats=4),
@@ -527,8 +596,11 @@ class TestVoiceLead:
         are searched, and the optimizer picks k=-1 [55,59,62] score 8.
         """
         from midison.midi_writer import ChordSpec, GenerationRequest, generate
+
         request = GenerationRequest(
-            key_center="C", scale_type="major", bpm=120,
+            key_center="C",
+            scale_type="major",
+            bpm=120,
             chords=[
                 ChordSpec(numeral="I", duration_beats=4),
                 ChordSpec(numeral="V", duration_beats=4, inversion=0),

@@ -54,7 +54,9 @@ def find_ableton_midi_tools_dir() -> Path:
     return default_path
 
 
-def create_amxd_container(patcher_json: dict[str, Any], device_type: str = "nagg") -> bytes:
+def create_amxd_container(
+    patcher_json: dict[str, Any], device_type: str = "nagg"
+) -> bytes:
     """
     Package a Max patcher dictionary into a valid Cycling '74 AMXD container file.
     device_type:
@@ -1107,28 +1109,108 @@ def get_midison_generator_patcher() -> dict[str, Any]:
         # obj-js -> live.miditool.out
         {"patchline": {"destination": ["obj-out", 0], "source": ["obj-js", 0]}},
         # Control routings: outlet 0 (integer index) -> prepend -> obj-js
-        {"patchline": {"destination": ["obj-prep-preset", 0], "source": ["obj-menu-preset", 0]}},
+        {
+            "patchline": {
+                "destination": ["obj-prep-preset", 0],
+                "source": ["obj-menu-preset", 0],
+            }
+        },
         {"patchline": {"destination": ["obj-js", 0], "source": ["obj-prep-preset", 0]}},
-        {"patchline": {"destination": ["obj-prep-voicing", 0], "source": ["obj-menu-voicing", 0]}},
-        {"patchline": {"destination": ["obj-js", 0], "source": ["obj-prep-voicing", 0]}},
-        {"patchline": {"destination": ["obj-prep-groove", 0], "source": ["obj-menu-groove", 0]}},
+        {
+            "patchline": {
+                "destination": ["obj-prep-voicing", 0],
+                "source": ["obj-menu-voicing", 0],
+            }
+        },
+        {
+            "patchline": {
+                "destination": ["obj-js", 0],
+                "source": ["obj-prep-voicing", 0],
+            }
+        },
+        {
+            "patchline": {
+                "destination": ["obj-prep-groove", 0],
+                "source": ["obj-menu-groove", 0],
+            }
+        },
         {"patchline": {"destination": ["obj-js", 0], "source": ["obj-prep-groove", 0]}},
-        {"patchline": {"destination": ["obj-prep-octave", 0], "source": ["obj-num-oct", 0]}},
+        {
+            "patchline": {
+                "destination": ["obj-prep-octave", 0],
+                "source": ["obj-num-oct", 0],
+            }
+        },
         {"patchline": {"destination": ["obj-js", 0], "source": ["obj-prep-octave", 0]}},
-        {"patchline": {"destination": ["obj-prep-human", 0], "source": ["obj-btn-human", 0]}},
+        {
+            "patchline": {
+                "destination": ["obj-prep-human", 0],
+                "source": ["obj-btn-human", 0],
+            }
+        },
         {"patchline": {"destination": ["obj-js", 0], "source": ["obj-prep-human", 0]}},
-        {"patchline": {"destination": ["obj-prep-lead", 0], "source": ["obj-btn-lead", 0]}},
+        {
+            "patchline": {
+                "destination": ["obj-prep-lead", 0],
+                "source": ["obj-btn-lead", 0],
+            }
+        },
         {"patchline": {"destination": ["obj-js", 0], "source": ["obj-prep-lead", 0]}},
-        {"patchline": {"destination": ["obj-prep-rootless", 0], "source": ["obj-btn-rootless", 0]}},
-        {"patchline": {"destination": ["obj-js", 0], "source": ["obj-prep-rootless", 0]}},
+        {
+            "patchline": {
+                "destination": ["obj-prep-rootless", 0],
+                "source": ["obj-btn-rootless", 0],
+            }
+        },
+        {
+            "patchline": {
+                "destination": ["obj-js", 0],
+                "source": ["obj-prep-rootless", 0],
+            }
+        },
         # Parameter changes trigger bang into obj-trigger-in -> live.miditool.in
-        {"patchline": {"destination": ["obj-trigger-in", 0], "source": ["obj-menu-preset", 0]}},
-        {"patchline": {"destination": ["obj-trigger-in", 0], "source": ["obj-menu-voicing", 0]}},
-        {"patchline": {"destination": ["obj-trigger-in", 0], "source": ["obj-menu-groove", 0]}},
-        {"patchline": {"destination": ["obj-trigger-in", 0], "source": ["obj-num-oct", 0]}},
-        {"patchline": {"destination": ["obj-trigger-in", 0], "source": ["obj-btn-human", 0]}},
-        {"patchline": {"destination": ["obj-trigger-in", 0], "source": ["obj-btn-lead", 0]}},
-        {"patchline": {"destination": ["obj-trigger-in", 0], "source": ["obj-btn-rootless", 0]}},
+        {
+            "patchline": {
+                "destination": ["obj-trigger-in", 0],
+                "source": ["obj-menu-preset", 0],
+            }
+        },
+        {
+            "patchline": {
+                "destination": ["obj-trigger-in", 0],
+                "source": ["obj-menu-voicing", 0],
+            }
+        },
+        {
+            "patchline": {
+                "destination": ["obj-trigger-in", 0],
+                "source": ["obj-menu-groove", 0],
+            }
+        },
+        {
+            "patchline": {
+                "destination": ["obj-trigger-in", 0],
+                "source": ["obj-num-oct", 0],
+            }
+        },
+        {
+            "patchline": {
+                "destination": ["obj-trigger-in", 0],
+                "source": ["obj-btn-human", 0],
+            }
+        },
+        {
+            "patchline": {
+                "destination": ["obj-trigger-in", 0],
+                "source": ["obj-btn-lead", 0],
+            }
+        },
+        {
+            "patchline": {
+                "destination": ["obj-trigger-in", 0],
+                "source": ["obj-btn-rootless", 0],
+            }
+        },
         {"patchline": {"destination": ["obj-in", 0], "source": ["obj-trigger-in", 0]}},
     ]
 

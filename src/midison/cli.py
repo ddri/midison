@@ -321,7 +321,9 @@ def main(argv: list[str] | None = None) -> int:
             print("\nNext step in Ableton Live:")
             print("  1. Open Preferences / Settings (Cmd + ,)")
             print("  2. Go to 'Link, Tempo & MIDI'")
-            print("  3. Under 'Control Surface', select 'AbletonOSC' from the dropdown.")
+            print(
+                "  3. Under 'Control Surface', select 'AbletonOSC' from the dropdown."
+            )
             return 0
         except Exception as e:
             print(f"Error installing AbletonOSC: {e}", file=sys.stderr)
@@ -335,7 +337,9 @@ def main(argv: list[str] | None = None) -> int:
             print("\nNext step in Ableton Live 12:")
             print("  1. Open the Piano Roll / Clip View on any MIDI clip.")
             print("  2. Click the 'Generators' tab.")
-            print("  3. Select 'Midison Generator' to compose chords and grooves directly inside Live!")
+            print(
+                "  3. Select 'Midison Generator' to compose chords and grooves directly inside Live!"
+            )
             return 0
         except Exception as e:
             print(f"Error installing Max for Live MIDI tool: {e}", file=sys.stderr)
@@ -343,6 +347,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.list_vibes:
         from midison.vibes import list_all_vibes
+
         vibes = list_all_vibes()
         print("\n✨ Available Midison Emotion & Genre Vibes:")
         for v in vibes:
@@ -351,28 +356,42 @@ def main(argv: list[str] | None = None) -> int:
             print(f"    Mood:        {tags}")
             print(f"    Progression: {v.progression}")
             print(f"    Context:     {v.harmonic_context}")
-            print(f"    Suggested:   {v.suggested_key} {v.suggested_scale} @ {v.suggested_bpm} BPM | Voicing: {v.suggested_voicing} | Groove: {v.suggested_groove}")
+            print(
+                f"    Suggested:   {v.suggested_key} {v.suggested_scale} @ {v.suggested_bpm} BPM | Voicing: {v.suggested_voicing} | Groove: {v.suggested_groove}"
+            )
         print()
         return 0
 
     if args.list_songs:
         from midison.song import list_song_templates
+
         templates = list_song_templates()
         print("\n🎵 Available Midison Multi-Section Song Templates:")
         for t in templates:
-            print(f"\n  • {t.name} [{t.template_id}] - {t.recommended_bpm} BPM ({t.recommended_key} {t.recommended_scale})")
+            print(
+                f"\n  • {t.name} [{t.template_id}] - {t.recommended_bpm} BPM ({t.recommended_key} {t.recommended_scale})"
+            )
             print(f"    {t.description}")
             for sec in t.sections:
-                print(f"      - {sec.name.replace('_', ' ').title():<12} {sec.progression} ({sec.voicing}, {sec.pattern})")
+                print(
+                    f"      - {sec.name.replace('_', ' ').title():<12} {sec.progression} ({sec.voicing}, {sec.pattern})"
+                )
         print()
         return 0
 
     if args.song:
         from midison.song import generate_song_arrangement, inject_song_into_ableton
+
         output_dir = args.output_dir or config.get_output_directory()
         try:
-            custom_key = args.key if any(k in raw_args for k in ("-k", "--key")) else None
-            custom_mode = args.scale_type if any(m in raw_args for m in ("-m", "--mode")) else None
+            custom_key = (
+                args.key if any(k in raw_args for k in ("-k", "--key")) else None
+            )
+            custom_mode = (
+                args.scale_type
+                if any(m in raw_args for m in ("-m", "--mode"))
+                else None
+            )
             arrangement = generate_song_arrangement(
                 template_id=args.song,
                 key_center=custom_key,
@@ -385,11 +404,15 @@ def main(argv: list[str] | None = None) -> int:
             return 1
 
         print(f"\n🎵 Generated Song Arrangement: {arrangement.template.name}")
-        print(f"  Key: {arrangement.key_center} {arrangement.scale_type} | Tempo: {arrangement.bpm} BPM | Total Beats: {arrangement.total_beats:.1f}\n")
+        print(
+            f"  Key: {arrangement.key_center} {arrangement.scale_type} | Tempo: {arrangement.bpm} BPM | Total Beats: {arrangement.total_beats:.1f}\n"
+        )
         for sec in arrangement.sections:
             plan = sec.section_plan
             print(f"  • {plan.name.replace('_', ' ').title():<12} {plan.progression}")
-            print(f"    Notes: {sec.notes_count} | Beats: {sec.total_beats:.1f} | Voicing: {plan.voicing} | Groove: {plan.pattern}")
+            print(
+                f"    Notes: {sec.notes_count} | Beats: {sec.total_beats:.1f} | Voicing: {plan.voicing} | Groove: {plan.pattern}"
+            )
             if sec.midi_path:
                 print(f"    MIDI:  {sec.midi_path}")
 
@@ -397,10 +420,16 @@ def main(argv: list[str] | None = None) -> int:
             client = AbletonClient()
             track_idx = args.track if args.track is not None else 0
             try:
-                injected = inject_song_into_ableton(arrangement, client=client, track_index=track_idx)
-                print(f"\n✓ Injected {len(injected)} sections directly into Ableton Live on Track {track_idx + 1}:")
+                injected = inject_song_into_ableton(
+                    arrangement, client=client, track_index=track_idx
+                )
+                print(
+                    f"\n✓ Injected {len(injected)} sections directly into Ableton Live on Track {track_idx + 1}:"
+                )
                 for s in injected:
-                    print(f"  Scene {s['scene_index'] + 1} ({s['section_name'].title()}): {s['notes_count']} notes, {s['total_beats']:.1f} beats")
+                    print(
+                        f"  Scene {s['scene_index'] + 1} ({s['section_name'].title()}): {s['notes_count']} notes, {s['total_beats']:.1f} beats"
+                    )
             except Exception as e:
                 print(f"Error injecting song into Ableton Live: {e}", file=sys.stderr)
                 return 1
@@ -409,32 +438,46 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.suggest:
         if not args.progression:
-            print("Error: Progression required to suggest next chords. E.g. midison 'ii7 - V7' --suggest", file=sys.stderr)
+            print(
+                "Error: Progression required to suggest next chords. E.g. midison 'ii7 - V7' --suggest",
+                file=sys.stderr,
+            )
             return 1
         from midison.suggest import suggest_next_chords
+
         try:
-            suggestions = suggest_next_chords(args.progression, key_center=args.key, scale_type=args.scale_type)
+            suggestions = suggest_next_chords(
+                args.progression, key_center=args.key, scale_type=args.scale_type
+            )
         except Exception as e:
             print(f"Error analyzing progression: {e}", file=sys.stderr)
             return 1
 
-        print(f"\n🧭 Harmonic Navigator: Next Chord Suggestions for '{args.progression}' ({args.key} {args.scale_type}):\n")
+        print(
+            f"\n🧭 Harmonic Navigator: Next Chord Suggestions for '{args.progression}' ({args.key} {args.scale_type}):\n"
+        )
         header = f"  {'#':<3} {'Numeral':<10} {'Chord':<8} {'Pathway':<20} {'Mood':<26} {'Explanation'}"
         print(header)
         print("  " + "-" * 105)
         for i, s in enumerate(suggestions, 1):
-            print(f"  {i:<3} {s.numeral:<10} {s.chord_name:<8} {s.pathway:<20} {s.mood_descriptor:<26} {s.explanation}")
+            print(
+                f"  {i:<3} {s.numeral:<10} {s.chord_name:<8} {s.pathway:<20} {s.mood_descriptor:<26} {s.explanation}"
+            )
         print()
         return 0
 
     if args.vibe:
         from midison.vibes import find_vibes, get_vibe
+
         try:
             vibe_obj = get_vibe(args.vibe)
         except Exception:
             matches = find_vibes(args.vibe)
             if not matches:
-                print(f"Error: No vibe matching '{args.vibe}' found. Use --list-vibes to see options.", file=sys.stderr)
+                print(
+                    f"Error: No vibe matching '{args.vibe}' found. Use --list-vibes to see options.",
+                    file=sys.stderr,
+                )
                 return 1
             vibe_obj = matches[0]
 
@@ -511,9 +554,17 @@ def main(argv: list[str] | None = None) -> int:
                 target_clip = session_state.selected_scene
             if bpm is None:
                 bpm = round(session_state.tempo)
-            key_info = f" | Live Key: {session_state.key_name} {session_state.scale_name}" if session_state.key_name else ""
-            print(f"\n⚡ Synced with Ableton Live: {session_state.tempo:.1f} BPM ({session_state.time_signature}){key_info}")
-            print(f"  Target: Track {target_track + 1} (idx {target_track}), Clip Slot {target_clip + 1} (idx {target_clip})")
+            key_info = (
+                f" | Live Key: {session_state.key_name} {session_state.scale_name}"
+                if session_state.key_name
+                else ""
+            )
+            print(
+                f"\n⚡ Synced with Ableton Live: {session_state.tempo:.1f} BPM ({session_state.time_signature}){key_info}"
+            )
+            print(
+                f"  Target: Track {target_track + 1} (idx {target_track}), Clip Slot {target_clip + 1} (idx {target_clip})"
+            )
         else:
             if target_track is None:
                 target_track = 0
@@ -521,7 +572,9 @@ def main(argv: list[str] | None = None) -> int:
                 target_clip = 0
             if bpm is None:
                 bpm = 120
-            print(f"\nℹ Ableton Live session sync offline (using Track {target_track + 1} [idx {target_track}], Clip Slot {target_clip + 1} [idx {target_clip}])")
+            print(
+                f"\nℹ Ableton Live session sync offline (using Track {target_track + 1} [idx {target_track}], Clip Slot {target_clip + 1} [idx {target_clip}])"
+            )
     elif bpm is None:
         bpm = 120
 
@@ -540,6 +593,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.miditool_dict:
         import json
+
         payload = to_miditool_dict(request)
         print(json.dumps(payload, indent=2))
         return 0

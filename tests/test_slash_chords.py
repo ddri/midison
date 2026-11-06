@@ -284,8 +284,8 @@ class TestStepwiseDescendingBassline:
 
         # Explicit slash chords MUST preserve their specified bass note
         assert resolved.resolved_metadata[1]["midi"][0] % 12 == 11  # V/7 has B in bass
-        assert resolved.resolved_metadata[3]["midi"][0] % 12 == 7   # I/5 has G in bass
-        assert resolved.resolved_metadata[5]["midi"][0] % 12 == 4   # I/3 has E in bass
+        assert resolved.resolved_metadata[3]["midi"][0] % 12 == 7  # I/5 has G in bass
+        assert resolved.resolved_metadata[5]["midi"][0] % 12 == 4  # I/3 has E in bass
 
         # Timed notes should cover 32 beats (8 chords * 4 beats)
         assert resolved.total_beats == 32.0
@@ -307,5 +307,5 @@ class TestStepwiseDescendingBassline:
         assert len(resolved.resolved_metadata) == 8
         # Slash chords must still anchor their bass notes under drop2
         assert resolved.resolved_metadata[1]["midi"][0] % 12 == 11  # V/7 -> B
-        assert resolved.resolved_metadata[3]["midi"][0] % 12 == 7   # I/5 -> G
-        assert resolved.resolved_metadata[5]["midi"][0] % 12 == 4   # I/3 -> E
+        assert resolved.resolved_metadata[3]["midi"][0] % 12 == 7  # I/5 -> G
+        assert resolved.resolved_metadata[5]["midi"][0] % 12 == 4  # I/3 -> E

@@ -18,7 +18,9 @@ def isolated_config_dir(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "CONFIG_DIR", tmp_path / ".midison")
     monkeypatch.setattr(config, "LEGACY_CONFIG_DIR", tmp_path / ".banjo")
     monkeypatch.setattr(config, "DEFAULT_OUTPUT_DIR", tmp_path / "Music" / "midison")
-    monkeypatch.setattr(config, "LEGACY_OUTPUT_DIR", tmp_path / "Music" / "banjo_legacy")
+    monkeypatch.setattr(
+        config, "LEGACY_OUTPUT_DIR", tmp_path / "Music" / "banjo_legacy"
+    )
     return tmp_path
 
 
@@ -49,16 +51,18 @@ def test_generate_minimal_args(isolated_config_dir, tmp_path):
     out = tmp_path / "out"
     config.set_output_directory(out)
 
-    result = mcp_server.handle_generate_midi_progression({
-        "key_center": "C",
-        "scale_type": "major",
-        "bpm": 110,
-        "chords": [
-            {"numeral": "ii7", "duration_beats": 4},
-            {"numeral": "V7", "duration_beats": 4},
-            {"numeral": "Imaj7", "duration_beats": 8},
-        ],
-    })
+    result = mcp_server.handle_generate_midi_progression(
+        {
+            "key_center": "C",
+            "scale_type": "major",
+            "bpm": 110,
+            "chords": [
+                {"numeral": "ii7", "duration_beats": 4},
+                {"numeral": "V7", "duration_beats": 4},
+                {"numeral": "Imaj7", "duration_beats": 8},
+            ],
+        }
+    )
 
     assert "filepath" in result
     assert "sidecar_path" in result
@@ -80,26 +84,33 @@ def test_generate_full_args(isolated_config_dir, tmp_path):
     out = tmp_path / "out"
     config.set_output_directory(out)
 
-    result = mcp_server.handle_generate_midi_progression({
-        "key_center": "Eb",
-        "scale_type": "major",
-        "bpm": 72,
-        "chords": [
-            {"numeral": "Imaj9", "duration_beats": 4, "voicing": "drop2"},
-            {"numeral": "V7/vi", "duration_beats": 2, "voicing": "drop2"},
-            {"numeral": "vi9",   "duration_beats": 4, "voicing": "drop2"},
-            {"numeral": "ii9",   "duration_beats": 2, "voicing": "drop2"},
-            {"numeral": "V13",   "duration_beats": 2, "voicing": "drop2"},
-            {"numeral": "Imaj9", "duration_beats": 2, "voicing": "drop2", "inversion": 1},
-        ],
-        "octave": 4,
-        "time_signature": "4/4",
-        "humanize": {"velocity_range": 10, "timing_ms": 6, "base_velocity": 75},
-        "seed": 7,
-        "filename": "neo_soul_test",
-        "prompt_context": "Neo-soul in Eb with secondary dominant approach to vi.",
-        "generation_notes": "Drop-2 voicings throughout for a slightly horn-like spread.",
-    })
+    result = mcp_server.handle_generate_midi_progression(
+        {
+            "key_center": "Eb",
+            "scale_type": "major",
+            "bpm": 72,
+            "chords": [
+                {"numeral": "Imaj9", "duration_beats": 4, "voicing": "drop2"},
+                {"numeral": "V7/vi", "duration_beats": 2, "voicing": "drop2"},
+                {"numeral": "vi9", "duration_beats": 4, "voicing": "drop2"},
+                {"numeral": "ii9", "duration_beats": 2, "voicing": "drop2"},
+                {"numeral": "V13", "duration_beats": 2, "voicing": "drop2"},
+                {
+                    "numeral": "Imaj9",
+                    "duration_beats": 2,
+                    "voicing": "drop2",
+                    "inversion": 1,
+                },
+            ],
+            "octave": 4,
+            "time_signature": "4/4",
+            "humanize": {"velocity_range": 10, "timing_ms": 6, "base_velocity": 75},
+            "seed": 7,
+            "filename": "neo_soul_test",
+            "prompt_context": "Neo-soul in Eb with secondary dominant approach to vi.",
+            "generation_notes": "Drop-2 voicings throughout for a slightly horn-like spread.",
+        }
+    )
 
     midi_path = Path(result["filepath"])
     assert midi_path.name == "neo_soul_test.mid"
@@ -120,53 +131,80 @@ def test_generate_full_args(isolated_config_dir, tmp_path):
 
 def test_generate_missing_required_raises():
     with pytest.raises(ValueError, match="Missing required argument: key_center"):
-        mcp_server.handle_generate_midi_progression({
-            "scale_type": "major", "bpm": 100, "chords": [{"numeral": "I", "duration_beats": 4}],
-        })
+        mcp_server.handle_generate_midi_progression(
+            {
+                "scale_type": "major",
+                "bpm": 100,
+                "chords": [{"numeral": "I", "duration_beats": 4}],
+            }
+        )
 
 
 def test_generate_empty_chords_raises():
     with pytest.raises(ValueError, match="non-empty list"):
-        mcp_server.handle_generate_midi_progression({
-            "key_center": "C", "scale_type": "major", "bpm": 100, "chords": [],
-        })
+        mcp_server.handle_generate_midi_progression(
+            {
+                "key_center": "C",
+                "scale_type": "major",
+                "bpm": 100,
+                "chords": [],
+            }
+        )
 
 
 def test_generate_chord_missing_fields_raises():
     with pytest.raises(ValueError, match="numeral.*duration_beats"):
-        mcp_server.handle_generate_midi_progression({
-            "key_center": "C", "scale_type": "major", "bpm": 100,
-            "chords": [{"numeral": "I"}],  # missing duration_beats
-        })
+        mcp_server.handle_generate_midi_progression(
+            {
+                "key_center": "C",
+                "scale_type": "major",
+                "bpm": 100,
+                "chords": [{"numeral": "I"}],  # missing duration_beats
+            }
+        )
 
 
 def test_generate_bad_numeral_raises():
     """Parser errors propagate cleanly to MCP."""
     with pytest.raises(ValueError):  # parse_roman_numeral raises ValueError
-        mcp_server.handle_generate_midi_progression({
-            "key_center": "C", "scale_type": "major", "bpm": 100,
-            "chords": [{"numeral": "ZZZZ", "duration_beats": 4}],
-        })
+        mcp_server.handle_generate_midi_progression(
+            {
+                "key_center": "C",
+                "scale_type": "major",
+                "bpm": 100,
+                "chords": [{"numeral": "ZZZZ", "duration_beats": 4}],
+            }
+        )
 
 
 def test_generate_bad_scale_raises():
     with pytest.raises(ValueError, match="Invalid scale_type"):
-        mcp_server.handle_generate_midi_progression({
-            "key_center": "C", "scale_type": "bogolian", "bpm": 100,
-            "chords": [{"numeral": "I", "duration_beats": 4}],
-        })
+        mcp_server.handle_generate_midi_progression(
+            {
+                "key_center": "C",
+                "scale_type": "bogolian",
+                "bpm": 100,
+                "chords": [{"numeral": "I", "duration_beats": 4}],
+            }
+        )
 
 
-def test_generate_creates_default_output_dir(isolated_config_dir, tmp_path, monkeypatch):
+def test_generate_creates_default_output_dir(
+    isolated_config_dir, tmp_path, monkeypatch
+):
     """When no config is set, falls back to DEFAULT_OUTPUT_DIR (created on first write)."""
     # isolated_config_dir fixture already redirects DEFAULT_OUTPUT_DIR into tmp_path.
     default_out = tmp_path / "Music" / "midison"
     assert not default_out.exists()
 
-    result = mcp_server.handle_generate_midi_progression({
-        "key_center": "G", "scale_type": "major", "bpm": 90,
-        "chords": [{"numeral": "I", "duration_beats": 4}],
-    })
+    result = mcp_server.handle_generate_midi_progression(
+        {
+            "key_center": "G",
+            "scale_type": "major",
+            "bpm": 90,
+            "chords": [{"numeral": "I", "duration_beats": 4}],
+        }
+    )
 
     assert default_out.is_dir()
     assert Path(result["filepath"]).parent == default_out.resolve()
@@ -174,10 +212,14 @@ def test_generate_creates_default_output_dir(isolated_config_dir, tmp_path, monk
 
 def test_generate_bad_key_center_raises():
     with pytest.raises(ValueError, match="Invalid key_center"):
-        mcp_server.handle_generate_midi_progression({
-            "key_center": "Cmaj", "scale_type": "major", "bpm": 100,
-            "chords": [{"numeral": "I", "duration_beats": 4}],
-        })
+        mcp_server.handle_generate_midi_progression(
+            {
+                "key_center": "Cmaj",
+                "scale_type": "major",
+                "bpm": 100,
+                "chords": [{"numeral": "I", "duration_beats": 4}],
+            }
+        )
 
 
 def test_generate_seed_reproducibility(isolated_config_dir, tmp_path):
@@ -185,7 +227,9 @@ def test_generate_seed_reproducibility(isolated_config_dir, tmp_path):
     config.set_output_directory(tmp_path / "out")
 
     args = {
-        "key_center": "C", "scale_type": "major", "bpm": 100,
+        "key_center": "C",
+        "scale_type": "major",
+        "bpm": 100,
         "chords": [
             {"numeral": "ii7", "duration_beats": 4, "voicing": "drop2"},
             {"numeral": "V7", "duration_beats": 4, "voicing": "drop2"},
@@ -209,10 +253,17 @@ def test_call_tool_dispatcher_generate(isolated_config_dir, tmp_path):
     """The async call_tool dispatcher returns TextContent with JSON-encoded result."""
     config.set_output_directory(tmp_path / "out")
 
-    response = asyncio.run(mcp_server.call_tool("generate_midi_progression", {
-        "key_center": "C", "scale_type": "major", "bpm": 100,
-        "chords": [{"numeral": "I", "duration_beats": 4}],
-    }))
+    response = asyncio.run(
+        mcp_server.call_tool(
+            "generate_midi_progression",
+            {
+                "key_center": "C",
+                "scale_type": "major",
+                "bpm": 100,
+                "chords": [{"numeral": "I", "duration_beats": 4}],
+            },
+        )
+    )
 
     assert len(response) == 1
     assert response[0].type == "text"
@@ -243,7 +294,10 @@ def test_list_tools_returns_all_tools():
     # Schemas are non-trivial.
     schemas = {t.name: t.inputSchema for t in tools}
     assert schemas["generate_midi_progression"]["required"] == [
-        "key_center", "scale_type", "bpm", "chords",
+        "key_center",
+        "scale_type",
+        "bpm",
+        "chords",
     ]
     assert "track_index" in schemas["send_to_ableton"]["properties"]
     assert "port_name" in schemas["stream_to_midi_port"]["properties"]
@@ -253,36 +307,51 @@ def test_voicing_rootless_string_raises_migration_error(isolated_config_dir, tmp
     """Passing voicing='rootless' (old API) raises a targeted migration error."""
     config.set_output_directory(tmp_path / "out")
     with pytest.raises(ValueError, match="rootless.*no longer a voicing option"):
-        mcp_server.handle_generate_midi_progression({
-            "key_center": "C",
-            "scale_type": "major",
-            "bpm": 120,
-            "chords": [{"numeral": "I", "duration_beats": 4, "voicing": "rootless"}],
-        })
+        mcp_server.handle_generate_midi_progression(
+            {
+                "key_center": "C",
+                "scale_type": "major",
+                "bpm": 120,
+                "chords": [
+                    {"numeral": "I", "duration_beats": 4, "voicing": "rootless"}
+                ],
+            }
+        )
 
 
 def test_spread_plus_rootless_raises(isolated_config_dir, tmp_path):
     """voicing=spread combined with rootless=true raises a validation error."""
     config.set_output_directory(tmp_path / "out")
     with pytest.raises(ValueError, match="rootless.*spread"):
-        mcp_server.handle_generate_midi_progression({
-            "key_center": "C",
-            "scale_type": "major",
-            "bpm": 120,
-            "chords": [{"numeral": "I", "duration_beats": 4, "voicing": "spread", "rootless": True}],
-        })
+        mcp_server.handle_generate_midi_progression(
+            {
+                "key_center": "C",
+                "scale_type": "major",
+                "bpm": 120,
+                "chords": [
+                    {
+                        "numeral": "I",
+                        "duration_beats": 4,
+                        "voicing": "spread",
+                        "rootless": True,
+                    }
+                ],
+            }
+        )
 
 
 def test_rootless_true_accepted(isolated_config_dir, tmp_path):
     """rootless=true is accepted as a separate field alongside a non-spread voicing."""
     out = tmp_path / "out"
     config.set_output_directory(out)
-    result = mcp_server.handle_generate_midi_progression({
-        "key_center": "C",
-        "scale_type": "major",
-        "bpm": 120,
-        "chords": [{"numeral": "Imaj7", "duration_beats": 4, "rootless": True}],
-    })
+    result = mcp_server.handle_generate_midi_progression(
+        {
+            "key_center": "C",
+            "scale_type": "major",
+            "bpm": 120,
+            "chords": [{"numeral": "Imaj7", "duration_beats": 4, "rootless": True}],
+        }
+    )
     assert "filepath" in result
     # Cmaj7 has 4 notes; rootless strips the root, leaving 3
     assert len(result["resolved"][0]["midi"]) == 3
@@ -292,14 +361,16 @@ def test_max_octave_field_accepted(isolated_config_dir, tmp_path):
     """max_octave field is accepted and passed through to GenerationRequest."""
     out = tmp_path / "out"
     config.set_output_directory(out)
-    result = mcp_server.handle_generate_midi_progression({
-        "key_center": "C",
-        "scale_type": "major",
-        "bpm": 120,
-        "chords": [{"numeral": "I", "duration_beats": 4}],
-        "octave": 7,
-        "max_octave": 4,
-    })
+    result = mcp_server.handle_generate_midi_progression(
+        {
+            "key_center": "C",
+            "scale_type": "major",
+            "bpm": 120,
+            "chords": [{"numeral": "I", "duration_beats": 4}],
+            "octave": 7,
+            "max_octave": 4,
+        }
+    )
     # theory octave=7 → root MIDI (7+1)*12=96
     # _clamp_to_max_octave uses (n//12)-2: (96//12)-2=6 > max_octave=4
     # shift = (6-4)*12=24 → root at MIDI 72
@@ -310,29 +381,36 @@ def test_pattern_field_accepted(isolated_config_dir, tmp_path):
     """pattern field is accepted per chord and passed through."""
     out = tmp_path / "out"
     config.set_output_directory(out)
-    result = mcp_server.handle_generate_midi_progression({
-        "key_center": "C",
-        "scale_type": "harmonic_minor",
-        "bpm": 120,
-        "chords": [{"numeral": "i", "duration_beats": 4, "pattern": "arpeggio_up"}],
-    })
+    result = mcp_server.handle_generate_midi_progression(
+        {
+            "key_center": "C",
+            "scale_type": "harmonic_minor",
+            "bpm": 120,
+            "chords": [{"numeral": "i", "duration_beats": 4, "pattern": "arpeggio_up"}],
+        }
+    )
     assert result["resolved"][0]["pattern"] == "arpeggio_up"
 
 
 def test_invalid_pattern_raises(isolated_config_dir, tmp_path):
     config.set_output_directory(tmp_path / "out")
     with pytest.raises(ValueError, match="Invalid pattern"):
-        mcp_server.handle_generate_midi_progression({
-            "key_center": "C",
-            "scale_type": "major",
-            "bpm": 120,
-            "chords": [{"numeral": "I", "duration_beats": 4, "pattern": "dubstep_drop"}],
-        })
+        mcp_server.handle_generate_midi_progression(
+            {
+                "key_center": "C",
+                "scale_type": "major",
+                "bpm": 120,
+                "chords": [
+                    {"numeral": "I", "duration_beats": 4, "pattern": "dubstep_drop"}
+                ],
+            }
+        )
 
 
 class TestVoiceLeadPlumbing:
     def test_voice_lead_in_schema_with_default_false(self):
         from midison.mcp_server import GENERATE_MIDI_PROGRESSION_SCHEMA
+
         prop = GENERATE_MIDI_PROGRESSION_SCHEMA["properties"].get("voice_lead")
         assert prop is not None, "voice_lead missing from schema"
         assert prop["type"] == "boolean"
@@ -340,19 +418,29 @@ class TestVoiceLeadPlumbing:
 
     def test_handler_passes_voice_lead_true_through(self):
         from midison.mcp_server import _build_generation_request
-        req = _build_generation_request({
-            "key_center": "C", "scale_type": "major", "bpm": 120,
-            "chords": [{"numeral": "I", "duration_beats": 4}],
-            "voice_lead": True,
-        })
+
+        req = _build_generation_request(
+            {
+                "key_center": "C",
+                "scale_type": "major",
+                "bpm": 120,
+                "chords": [{"numeral": "I", "duration_beats": 4}],
+                "voice_lead": True,
+            }
+        )
         assert req.voice_lead is True
 
     def test_handler_defaults_voice_lead_to_false(self):
         from midison.mcp_server import _build_generation_request
-        req = _build_generation_request({
-            "key_center": "C", "scale_type": "major", "bpm": 120,
-            "chords": [{"numeral": "I", "duration_beats": 4}],
-        })
+
+        req = _build_generation_request(
+            {
+                "key_center": "C",
+                "scale_type": "major",
+                "bpm": 120,
+                "chords": [{"numeral": "I", "duration_beats": 4}],
+            }
+        )
         assert req.voice_lead is False
 
 
@@ -372,15 +460,17 @@ def test_handle_send_to_ableton(isolated_config_dir, tmp_path):
     }
 
     with patch("midison.mcp_server.AbletonClient", return_value=mock_client):
-        res = mcp_server.handle_send_to_ableton({
-            "key_center": "Eb",
-            "scale_type": "major",
-            "bpm": 120,
-            "track_index": 1,
-            "clip_index": 2,
-            "fire": True,
-            "chords": [{"numeral": "ii7", "duration_beats": 4.0}],
-        })
+        res = mcp_server.handle_send_to_ableton(
+            {
+                "key_center": "Eb",
+                "scale_type": "major",
+                "bpm": 120,
+                "track_index": 1,
+                "clip_index": 2,
+                "fire": True,
+                "chords": [{"numeral": "ii7", "duration_beats": 4.0}],
+            }
+        )
 
     assert res["status"] == "success"
     assert res["track_index"] == 1
@@ -460,11 +550,13 @@ def test_handle_send_to_ableton_auto_sync(isolated_config_dir, tmp_path):
 
     with patch("midison.mcp_server.AbletonClient", return_value=mock_client):
         # Omit bpm, track_index, and clip_index
-        res = mcp_server.handle_send_to_ableton({
-            "key_center": "C",
-            "scale_type": "major",
-            "chords": [{"numeral": "I", "duration_beats": 4.0}],
-        })
+        res = mcp_server.handle_send_to_ableton(
+            {
+                "key_center": "C",
+                "scale_type": "major",
+                "chords": [{"numeral": "I", "duration_beats": 4.0}],
+            }
+        )
 
     assert res["status"] == "success"
     assert res["track_index"] == 3
@@ -475,7 +567,6 @@ def test_handle_send_to_ableton_auto_sync(isolated_config_dir, tmp_path):
     assert Path(res["file_path"]).exists()
 
 
-
 def test_handle_stream_to_midi_port(isolated_config_dir, tmp_path):
     from unittest.mock import MagicMock, patch
 
@@ -484,15 +575,19 @@ def test_handle_stream_to_midi_port(isolated_config_dir, tmp_path):
     mock_resolved.total_beats = 4.0
     mock_resolved.resolved_metadata = [{"numeral": "I"}]
 
-    with patch("midison.mcp_server.stream_progression", return_value=mock_resolved) as mock_stream:
-        res = mcp_server.handle_stream_to_midi_port({
-            "key_center": "C",
-            "scale_type": "major",
-            "bpm": 120,
-            "port_name": "TestPort",
-            "loop": False,
-            "chords": [{"numeral": "I", "duration_beats": 4.0}],
-        })
+    with patch(
+        "midison.mcp_server.stream_progression", return_value=mock_resolved
+    ) as mock_stream:
+        res = mcp_server.handle_stream_to_midi_port(
+            {
+                "key_center": "C",
+                "scale_type": "major",
+                "bpm": 120,
+                "port_name": "TestPort",
+                "loop": False,
+                "chords": [{"numeral": "I", "duration_beats": 4.0}],
+            }
+        )
 
     assert res["status"] == "success"
     assert res["port"] == "TestPort"
@@ -506,12 +601,16 @@ def test_handle_install_ableton_integrations(tmp_path):
     fake_osc = tmp_path / "Remote Scripts" / "AbletonOSC"
     fake_m4l = tmp_path / "Max Generators" / "Midison Generator.amxd"
 
-    with patch("midison.mcp_server.install_ableton_osc", return_value=fake_osc), \
-         patch("midison.mcp_server.install_m4l_device", return_value=fake_m4l):
-        res = mcp_server.handle_install_ableton_integrations({
-            "install_ableton_osc": True,
-            "install_max_generator": True,
-        })
+    with (
+        patch("midison.mcp_server.install_ableton_osc", return_value=fake_osc),
+        patch("midison.mcp_server.install_m4l_device", return_value=fake_m4l),
+    ):
+        res = mcp_server.handle_install_ableton_integrations(
+            {
+                "install_ableton_osc": True,
+                "install_max_generator": True,
+            }
+        )
 
     assert res["status"] == "success"
     assert "ableton_osc" in res["installed_paths"]
@@ -527,11 +626,13 @@ def test_list_tools_includes_songwriting_tools():
 
 
 def test_handle_suggest_next_chord():
-    res = mcp_server.handle_suggest_next_chord({
-        "current_progression": "ii7 - V7",
-        "key_center": "C",
-        "scale_type": "major",
-    })
+    res = mcp_server.handle_suggest_next_chord(
+        {
+            "current_progression": "ii7 - V7",
+            "key_center": "C",
+            "scale_type": "major",
+        }
+    )
     assert res["status"] == "success"
     assert len(res["suggestions"]) >= 4
     numerals = [s["numeral"] for s in res["suggestions"]]
@@ -540,10 +641,12 @@ def test_handle_suggest_next_chord():
 
 def test_handle_generate_song_structure(isolated_config_dir, tmp_path):
     config.set_output_directory(tmp_path / "out")
-    res = mcp_server.handle_generate_song_structure({
-        "template_id": "city_pop",
-        "bpm": 118,
-    })
+    res = mcp_server.handle_generate_song_structure(
+        {
+            "template_id": "city_pop",
+            "bpm": 118,
+        }
+    )
     assert res["status"] == "success"
     assert res["template_id"] == "city_pop"
     assert len(res["sections"]) == 4
@@ -562,11 +665,11 @@ def test_handle_list_vibes():
 
 def test_handle_generate_midi_progression_with_vibe(isolated_config_dir, tmp_path):
     config.set_output_directory(tmp_path / "out")
-    res = mcp_server.handle_generate_midi_progression({
-        "vibe": "melancholy_city_pop",
-    })
+    res = mcp_server.handle_generate_midi_progression(
+        {
+            "vibe": "melancholy_city_pop",
+        }
+    )
     assert "filepath" in res
     assert Path(res["filepath"]).exists()
     assert len(res["resolved"]) == 4
-
-

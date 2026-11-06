@@ -36,21 +36,28 @@ Add these tests to `tests/test_midi_writer.py` inside `class TestMidiWriter`:
 def test_rootless_false_by_default(self, tmp_output):
     """ChordSpec.rootless defaults to False; all notes including root are present."""
     request = GenerationRequest(
-        key_center="C", scale_type="major", bpm=120,
+        key_center="C",
+        scale_type="major",
+        bpm=120,
         chords=[ChordSpec("I", 4)],  # C major triad: C E G
-        octave=3, filename="test_rootless_default",
+        octave=3,
+        filename="test_rootless_default",
     )
     result = generate(request, tmp_output)
     midi_notes = result.resolved[0]["midi"]
     # C major triad in octave 3 (Ableton C3=60): C3=60, E3=64, G3=67
     assert 60 in midi_notes  # root C must be present
 
+
 def test_rootless_true_strips_root(self, tmp_output):
     """ChordSpec with rootless=True omits the root note."""
     request = GenerationRequest(
-        key_center="C", scale_type="major", bpm=120,
+        key_center="C",
+        scale_type="major",
+        bpm=120,
         chords=[ChordSpec("Imaj7", 4, rootless=True)],  # Cmaj7: C E G B
-        octave=3, filename="test_rootless_strips",
+        octave=3,
+        filename="test_rootless_strips",
     )
     result = generate(request, tmp_output)
     midi_notes = result.resolved[0]["midi"]
@@ -76,6 +83,7 @@ In `src/banjo/midi_writer.py`, make these changes:
 @dataclass
 class ChordSpec:
     """Per-chord input to the writer."""
+
     numeral: str
     duration_beats: float
     inversion: int | None = None
@@ -86,33 +94,37 @@ class ChordSpec:
 Then in `generate()`, restructure the per-chord resolution block. Replace the existing block (lines 87–110) with:
 
 ```python
-    for spec in request.chords:
-        parsed = parse_roman_numeral(spec.numeral)
-        explicit_inversion = parsed.inversion > 0 or spec.inversion is not None
-        if spec.inversion is not None:
-            parsed.inversion = spec.inversion
-        chord = build_chord(parsed, key_pc, request.scale_type, octave=request.octave)
+for spec in request.chords:
+    parsed = parse_roman_numeral(spec.numeral)
+    explicit_inversion = parsed.inversion > 0 or spec.inversion is not None
+    if spec.inversion is not None:
+        parsed.inversion = spec.inversion
+    chord = build_chord(parsed, key_pc, request.scale_type, octave=request.octave)
 
-        # Step 1-2: apply voicing (voice-led or direct)
-        if request.voice_lead and previous_voiced is not None:
-            candidates = build_candidates(
-                parsed, key_pc, request.scale_type, request.octave,
-                spec.voicing, explicit_inversion,
-            )
-            chosen_inv, voiced = choose_voicing_position(candidates, previous_voiced)
-            parsed.inversion = chosen_inv
-        else:
-            voiced = apply_voicing(list(chord.midi_notes), spec.voicing)
+    # Step 1-2: apply voicing (voice-led or direct)
+    if request.voice_lead and previous_voiced is not None:
+        candidates = build_candidates(
+            parsed,
+            key_pc,
+            request.scale_type,
+            request.octave,
+            spec.voicing,
+            explicit_inversion,
+        )
+        chosen_inv, voiced = choose_voicing_position(candidates, previous_voiced)
+        parsed.inversion = chosen_inv
+    else:
+        voiced = apply_voicing(list(chord.midi_notes), spec.voicing)
 
-        # Step 3: rootless — strip root after voice leading so VL sees the full chord
-        if spec.rootless:
-            voiced = apply_voicing(voiced, "rootless")
+    # Step 3: rootless — strip root after voice leading so VL sees the full chord
+    if spec.rootless:
+        voiced = apply_voicing(voiced, "rootless")
 
-        # Step 4: max_octave clamp — hard ceiling applied last
-        voiced = _clamp_to_max_octave(voiced, request.max_octave)
+    # Step 4: max_octave clamp — hard ceiling applied last
+    voiced = _clamp_to_max_octave(voiced, request.max_octave)
 
-        resolved_chords.append((spec, parsed, chord, voiced))
-        previous_voiced = voiced
+    resolved_chords.append((spec, parsed, chord, voiced))
+    previous_voiced = voiced
 ```
 
 Add this helper function at the bottom of `midi_writer.py` (before `_auto_filename`):
@@ -171,7 +183,9 @@ Add to `class TestMidiWriter` in `tests/test_midi_writer.py`:
 def test_default_octave_is_3(self, tmp_output):
     """GenerationRequest.octave defaults to 3 (Ableton mid-low register)."""
     request = GenerationRequest(
-        key_center="C", scale_type="major", bpm=120,
+        key_center="C",
+        scale_type="major",
+        bpm=120,
         chords=[ChordSpec("I", 4)],
         filename="test_default_octave",
     )
@@ -179,12 +193,16 @@ def test_default_octave_is_3(self, tmp_output):
     result = generate(request, tmp_output)
     assert min(result.resolved[0]["midi"]) == 60  # C3
 
+
 def test_max_octave_clamps_chord_one_octave_above(self, tmp_output):
     """A chord one octave above max_octave is shifted down by one octave."""
     request = GenerationRequest(
-        key_center="C", scale_type="major", bpm=120,
+        key_center="C",
+        scale_type="major",
+        bpm=120,
         chords=[ChordSpec("I", 4)],
-        octave=6, max_octave=5,
+        octave=6,
+        max_octave=5,
         filename="test_max_octave_clamp_one",
     )
     result = generate(request, tmp_output)
@@ -192,12 +210,16 @@ def test_max_octave_clamps_chord_one_octave_above(self, tmp_output):
     # Root should be at octave 5 (C5=84), not 6 (C6=96)
     assert min(midi_notes) == 84  # C5
 
+
 def test_max_octave_clamps_chord_several_octaves_above(self, tmp_output):
     """A chord several octaves above max_octave is shifted to land at max_octave."""
     request = GenerationRequest(
-        key_center="C", scale_type="major", bpm=120,
+        key_center="C",
+        scale_type="major",
+        bpm=120,
         chords=[ChordSpec("I", 4)],
-        octave=8, max_octave=5,
+        octave=8,
+        max_octave=5,
         filename="test_max_octave_clamp_many",
     )
     result = generate(request, tmp_output)
@@ -205,22 +227,29 @@ def test_max_octave_clamps_chord_several_octaves_above(self, tmp_output):
     # Root should be at octave 5 (C5=84), not 8 (C8=120)
     assert min(midi_notes) == 84  # C5
 
+
 def test_max_octave_does_not_clamp_chord_at_limit(self, tmp_output):
     """A chord at exactly max_octave passes through unchanged."""
     request = GenerationRequest(
-        key_center="C", scale_type="major", bpm=120,
+        key_center="C",
+        scale_type="major",
+        bpm=120,
         chords=[ChordSpec("I", 4)],
-        octave=5, max_octave=5,
+        octave=5,
+        max_octave=5,
         filename="test_max_octave_no_clamp",
     )
     result = generate(request, tmp_output)
     # Root C5=84 is at octave 5, which equals max_octave — no shift
     assert min(result.resolved[0]["midi"]) == 84  # C5
 
+
 def test_max_octave_default_is_5(self):
     """GenerationRequest.max_octave defaults to 5."""
     request = GenerationRequest(
-        key_center="C", scale_type="major", bpm=120,
+        key_center="C",
+        scale_type="major",
+        bpm=120,
         chords=[ChordSpec("I", 4)],
     )
     assert request.max_octave == 5
@@ -245,12 +274,12 @@ class GenerationRequest:
     scale_type: str
     bpm: int
     chords: list[ChordSpec]
-    octave: int = 3          # changed from 4; Ableton C3=60 (mid-low register)
+    octave: int = 3  # changed from 4; Ableton C3=60 (mid-low register)
     time_signature: str = "4/4"
     humanize: HumanizeSpec = field(default_factory=HumanizeSpec)
     seed: int | None = None
     voice_lead: bool = False
-    max_octave: int = 5      # new field; hard ceiling on chord register
+    max_octave: int = 5  # new field; hard ceiling on chord register
     filename: str | None = None
     prompt_context: str | None = None
     generation_notes: str | None = None
@@ -296,36 +325,51 @@ def test_voicing_rootless_string_raises_migration_error(isolated_config_dir, tmp
     """Passing voicing='rootless' (old API) raises a targeted migration error."""
     config.set_output_directory(tmp_path / "out")
     with pytest.raises(ValueError, match="rootless.*no longer a voicing option"):
-        mcp_server.handle_generate_midi_progression({
-            "key_center": "C",
-            "scale_type": "major",
-            "bpm": 120,
-            "chords": [{"numeral": "I", "duration_beats": 4, "voicing": "rootless"}],
-        })
+        mcp_server.handle_generate_midi_progression(
+            {
+                "key_center": "C",
+                "scale_type": "major",
+                "bpm": 120,
+                "chords": [
+                    {"numeral": "I", "duration_beats": 4, "voicing": "rootless"}
+                ],
+            }
+        )
 
 
 def test_spread_plus_rootless_raises(isolated_config_dir, tmp_path):
     """voicing=spread combined with rootless=true raises a validation error."""
     config.set_output_directory(tmp_path / "out")
     with pytest.raises(ValueError, match="rootless.*spread"):
-        mcp_server.handle_generate_midi_progression({
-            "key_center": "C",
-            "scale_type": "major",
-            "bpm": 120,
-            "chords": [{"numeral": "I", "duration_beats": 4, "voicing": "spread", "rootless": True}],
-        })
+        mcp_server.handle_generate_midi_progression(
+            {
+                "key_center": "C",
+                "scale_type": "major",
+                "bpm": 120,
+                "chords": [
+                    {
+                        "numeral": "I",
+                        "duration_beats": 4,
+                        "voicing": "spread",
+                        "rootless": True,
+                    }
+                ],
+            }
+        )
 
 
 def test_rootless_true_accepted(isolated_config_dir, tmp_path):
     """rootless=true is accepted as a separate field alongside a non-spread voicing."""
     out = tmp_path / "out"
     config.set_output_directory(out)
-    result = mcp_server.handle_generate_midi_progression({
-        "key_center": "C",
-        "scale_type": "major",
-        "bpm": 120,
-        "chords": [{"numeral": "Imaj7", "duration_beats": 4, "rootless": True}],
-    })
+    result = mcp_server.handle_generate_midi_progression(
+        {
+            "key_center": "C",
+            "scale_type": "major",
+            "bpm": 120,
+            "chords": [{"numeral": "Imaj7", "duration_beats": 4, "rootless": True}],
+        }
+    )
     assert "filepath" in result
     # Cmaj7 has 4 notes; rootless strips the root, leaving 3
     assert len(result["resolved"][0]["midi"]) == 3
@@ -335,14 +379,16 @@ def test_max_octave_field_accepted(isolated_config_dir, tmp_path):
     """max_octave field is accepted and passed through."""
     out = tmp_path / "out"
     config.set_output_directory(out)
-    result = mcp_server.handle_generate_midi_progression({
-        "key_center": "C",
-        "scale_type": "major",
-        "bpm": 120,
-        "chords": [{"numeral": "I", "duration_beats": 4}],
-        "octave": 7,
-        "max_octave": 4,
-    })
+    result = mcp_server.handle_generate_midi_progression(
+        {
+            "key_center": "C",
+            "scale_type": "major",
+            "bpm": 120,
+            "chords": [{"numeral": "I", "duration_beats": 4}],
+            "octave": 7,
+            "max_octave": 4,
+        }
+    )
     # Chord placed at octave 7 then clamped to 4; root C4=72
     assert min(result["resolved"][0]["midi"]) == 72  # C4
 ```
@@ -360,36 +406,38 @@ Expected: `FAILED`
 Replace the chord-parsing loop (the block that builds `chord_specs`) with:
 
 ```python
-    chord_specs: list[ChordSpec] = []
-    for i, c in enumerate(chords_raw):
-        if not isinstance(c, dict):
-            raise ValueError(f"chords[{i}] must be an object")
-        if "numeral" not in c or "duration_beats" not in c:
-            raise ValueError(f"chords[{i}] requires 'numeral' and 'duration_beats'")
+chord_specs: list[ChordSpec] = []
+for i, c in enumerate(chords_raw):
+    if not isinstance(c, dict):
+        raise ValueError(f"chords[{i}] must be an object")
+    if "numeral" not in c or "duration_beats" not in c:
+        raise ValueError(f"chords[{i}] requires 'numeral' and 'duration_beats'")
 
-        voicing = c.get("voicing", "close")
-        # Migration guard: rootless was removed from the voicing enum in v0.3.0.
-        if voicing == "rootless":
-            raise ValueError(
-                f"chords[{i}]: 'rootless' is no longer a voicing option — "
-                "pass rootless: true alongside your chosen voicing "
-                "(e.g. voicing: 'close', rootless: true)."
-            )
+    voicing = c.get("voicing", "close")
+    # Migration guard: rootless was removed from the voicing enum in v0.3.0.
+    if voicing == "rootless":
+        raise ValueError(
+            f"chords[{i}]: 'rootless' is no longer a voicing option — "
+            "pass rootless: true alongside your chosen voicing "
+            "(e.g. voicing: 'close', rootless: true)."
+        )
 
-        rootless = bool(c.get("rootless", False))
-        if voicing == "spread" and rootless:
-            raise ValueError(
-                f"chords[{i}]: rootless: true cannot be combined with "
-                "voicing: spread — spread is defined by its bass root."
-            )
+    rootless = bool(c.get("rootless", False))
+    if voicing == "spread" and rootless:
+        raise ValueError(
+            f"chords[{i}]: rootless: true cannot be combined with "
+            "voicing: spread — spread is defined by its bass root."
+        )
 
-        chord_specs.append(ChordSpec(
+    chord_specs.append(
+        ChordSpec(
             numeral=c["numeral"],
             duration_beats=float(c["duration_beats"]),
             inversion=c.get("inversion"),
             voicing=voicing,
             rootless=rootless,
-        ))
+        )
+    )
 ```
 
 Also update the `GenerationRequest` construction at the bottom of `_build_generation_request` to pass `max_octave`:
@@ -516,20 +564,22 @@ Add after the `octave` field:
 In `list_tools()`, replace the `description` on `generate_midi_progression`:
 
 ```python
-        Tool(
-            name="generate_midi_progression",
-            description=(
-                "Generate a MIDI chord progression for a solo producer or songwriter "
-                "to load into a DAW. Chords are self-contained — the root is always "
-                "included unless rootless is explicitly set to true. "
-                "Returns the MIDI file path, sidecar markdown path, resolved chord "
-                "metadata (per-chord pitches, voicing, inversion), and total duration. "
-                "Handles secondary dominants, modal mixture, half-diminished chords, "
-                "alterations, and five voicing styles — see the inputSchema for the full grammar. "
-                "Default octave 3 and max_octave 5 keep chords in a comfortable piano register."
-            ),
-            inputSchema=GENERATE_MIDI_PROGRESSION_SCHEMA,
+(
+    Tool(
+        name="generate_midi_progression",
+        description=(
+            "Generate a MIDI chord progression for a solo producer or songwriter "
+            "to load into a DAW. Chords are self-contained — the root is always "
+            "included unless rootless is explicitly set to true. "
+            "Returns the MIDI file path, sidecar markdown path, resolved chord "
+            "metadata (per-chord pitches, voicing, inversion), and total duration. "
+            "Handles secondary dominants, modal mixture, half-diminished chords, "
+            "alterations, and five voicing styles — see the inputSchema for the full grammar. "
+            "Default octave 3 and max_octave 5 keep chords in a comfortable piano register."
         ),
+        inputSchema=GENERATE_MIDI_PROGRESSION_SCHEMA,
+    ),
+)
 ```
 
 - [ ] **Step 5: Run the full suite to confirm nothing broke**
@@ -561,12 +611,12 @@ These tests still pass (the old code path still works at the Python level), but 
 
 Find line:
 ```python
-chords=[ChordSpec("Imaj9", 4, voicing="rootless")],
+chords = ([ChordSpec("Imaj9", 4, voicing="rootless")],)
 ```
 
 Replace with:
 ```python
-chords=[ChordSpec("Imaj9", 4, rootless=True)],
+chords = ([ChordSpec("Imaj9", 4, rootless=True)],)
 ```
 
 No assertions change — the test checks `generation_notes` text and metadata, not the voicing field value.
@@ -582,8 +632,12 @@ def test_rootless_seventh_yields_three_candidates(self):
     # build_candidates should produce 4 candidates (one per inversion of the 4-note chord).
     parsed = parse_roman_numeral("Imaj7")
     candidates = build_candidates(
-        parsed, parse_pitch_class("C"), "major", octave=4,
-        voicing="close", explicit_inversion=False,
+        parsed,
+        parse_pitch_class("C"),
+        "major",
+        octave=4,
+        voicing="close",
+        explicit_inversion=False,
     )
     # Imaj7 has 4 notes → 4 inversion candidates
     assert len(candidates) == 4

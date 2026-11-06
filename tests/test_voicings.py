@@ -69,4 +69,6 @@ class TestApplyVoicingPurity:
         original = list(notes)
         for voicing in ("close", "drop2", "drop3", "drop2and4", "spread", "rootless"):
             apply_voicing(notes, voicing)
-            assert notes == original, f"apply_voicing mutated input under voicing={voicing!r}"
+            assert notes == original, (
+                f"apply_voicing mutated input under voicing={voicing!r}"
+            )

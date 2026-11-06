@@ -162,15 +162,23 @@ GENERATE_MIDI_PROGRESSION_SCHEMA = {
             "description": "Optional velocity/timing humanization for a played-in feel.",
             "properties": {
                 "velocity_range": {
-                    "type": "integer", "minimum": 0, "maximum": 127, "default": 0,
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 127,
+                    "default": 0,
                     "description": "Max +/- deviation from base_velocity per note.",
                 },
                 "timing_ms": {
-                    "type": "integer", "minimum": 0, "default": 0,
+                    "type": "integer",
+                    "minimum": 0,
+                    "default": 0,
                     "description": "Max +/- timing deviation per note in milliseconds.",
                 },
                 "base_velocity": {
-                    "type": "integer", "minimum": 1, "maximum": 127, "default": 80,
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 127,
+                    "default": 80,
                     "description": "Center velocity. 80 is a comfortable mezzo-forte default.",
                 },
             },
@@ -266,7 +274,13 @@ GENERATE_SONG_STRUCTURE_SCHEMA = {
     "properties": {
         "template_id": {
             "type": "string",
-            "enum": ["neo_soul", "pop_anthem", "lofi_chill", "cinematic_minor", "city_pop"],
+            "enum": [
+                "neo_soul",
+                "pop_anthem",
+                "lofi_chill",
+                "cinematic_minor",
+                "city_pop",
+            ],
             "description": "Curated multi-section song architecture template ID.",
         },
         "key_center": {
@@ -500,6 +514,7 @@ async def list_tools() -> list[Tool]:
 # Tool handlers (pure functions on dicts — testable without transport)
 # ---------------------------------------------------------------------------
 
+
 def handle_set_output_directory(arguments: dict) -> dict:
     """Validate args, persist the directory, return a confirmation payload."""
     if "path" not in arguments:
@@ -522,7 +537,10 @@ def handle_generate_midi_progression(arguments: dict) -> dict:
     result = generate(request, output_dir)
     logger.info(
         "generated %s (%d chords, %.1f beats) in %s",
-        result.filepath.name, len(result.resolved), result.total_beats, output_dir,
+        result.filepath.name,
+        len(result.resolved),
+        result.total_beats,
+        output_dir,
     )
     return {
         "filepath": str(result.filepath),
@@ -538,6 +556,7 @@ def _build_generation_request(arguments: dict) -> GenerationRequest:
     if "vibe" in arguments and ("chords" not in arguments or not arguments["chords"]):
         from midison.cli import parse_progression_string
         from midison.vibes import find_vibes, get_vibe
+
         vibe_str = str(arguments["vibe"])
         try:
             vibe_obj = get_vibe(vibe_str)
@@ -558,7 +577,12 @@ def _build_generation_request(arguments: dict) -> GenerationRequest:
             default_pattern=vibe_obj.suggested_groove,
         )
         arguments["chords"] = [
-            {"numeral": c.numeral, "duration_beats": c.duration_beats, "voicing": c.voicing, "pattern": c.pattern}
+            {
+                "numeral": c.numeral,
+                "duration_beats": c.duration_beats,
+                "voicing": c.voicing,
+                "pattern": c.pattern,
+            }
             for c in chord_specs
         ]
 
@@ -611,14 +635,16 @@ def _build_generation_request(arguments: dict) -> GenerationRequest:
                 f"chords[{i}]: Invalid pattern: {pattern!r}. Valid options: {sorted(valid_patterns)}"
             )
 
-        chord_specs.append(ChordSpec(
-            numeral=c["numeral"],
-            duration_beats=float(c["duration_beats"]),
-            inversion=c.get("inversion"),
-            voicing=voicing,
-            rootless=rootless,
-            pattern=pattern,
-        ))
+        chord_specs.append(
+            ChordSpec(
+                numeral=c["numeral"],
+                duration_beats=float(c["duration_beats"]),
+                inversion=c.get("inversion"),
+                voicing=voicing,
+                rootless=rootless,
+                pattern=pattern,
+            )
+        )
 
     humanize_raw = arguments.get("humanize") or {}
     humanize = HumanizeSpec(
@@ -700,7 +726,11 @@ def handle_send_to_ableton(arguments: dict) -> dict:
     request = _build_generation_request(arguments)
 
     result = client.inject_progression(
-        request, track_index=track_index, clip_index=clip_index, fire=fire, sync_session=False
+        request,
+        track_index=track_index,
+        clip_index=clip_index,
+        fire=fire,
+        sync_session=False,
     )
     result["session_synced"] = session_synced
     if session_state and getattr(session_state, "connected", False) is True:
@@ -754,6 +784,7 @@ def handle_install_ableton_integrations(arguments: dict) -> dict:
 def handle_suggest_next_chord(arguments: dict) -> dict:
     """Recommend musically compelling next chords across 5 harmonic pathways."""
     from midison.suggest import suggest_next_chords
+
     if "current_progression" not in arguments:
         raise ValueError("Missing required argument: current_progression")
     prog = str(arguments["current_progression"])
@@ -781,6 +812,7 @@ def handle_suggest_next_chord(arguments: dict) -> dict:
 def handle_generate_song_structure(arguments: dict) -> dict:
     """Generate a multi-section song arrangement and optionally inject to Ableton Live."""
     from midison.song import generate_song_arrangement, inject_song_into_ableton
+
     if "template_id" not in arguments:
         raise ValueError("Missing required argument: template_id")
     template_id = str(arguments["template_id"])
@@ -821,7 +853,9 @@ def handle_generate_song_structure(arguments: dict) -> dict:
     }
     if to_ableton:
         client = AbletonClient()
-        injected = inject_song_into_ableton(arrangement, client=client, track_index=track_index)
+        injected = inject_song_into_ableton(
+            arrangement, client=client, track_index=track_index
+        )
         res["ableton_injected"] = injected
     return res
 
@@ -829,6 +863,7 @@ def handle_generate_song_structure(arguments: dict) -> dict:
 def handle_list_vibes(arguments: dict) -> dict:
     """List or search the Emotion & Genre Vibe catalog."""
     from midison.vibes import find_vibes, list_all_vibes
+
     query = arguments.get("query")
     if query:
         vibes = find_vibes(str(query))
@@ -860,6 +895,7 @@ def handle_list_vibes(arguments: dict) -> dict:
 # MCP dispatcher
 # ---------------------------------------------------------------------------
 
+
 @server.call_tool()
 async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     logger.info("tool call: %s args=%s", name, list(arguments.keys()))
@@ -890,14 +926,20 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
 # Entry point
 # ---------------------------------------------------------------------------
 
+
 async def _run() -> None:
     async with stdio_server() as (read_stream, write_stream):
-        await server.run(read_stream, write_stream, server.create_initialization_options())
+        await server.run(
+            read_stream, write_stream, server.create_initialization_options()
+        )
 
 
 def main() -> None:
-    logging.basicConfig(stream=sys.stderr, level=logging.INFO,
-                        format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    logging.basicConfig(
+        stream=sys.stderr,
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
     asyncio.run(_run())
 
 

@@ -38,7 +38,15 @@ _VIBES_CATALOG: list[VibeDefinition] = [
     VibeDefinition(
         vibe_id="melancholy_city_pop",
         title="Melancholy City Pop",
-        mood_tags=["melancholy", "japanese", "city pop", "nostalgic", "anime", "80s", "bittersweet"],
+        mood_tags=[
+            "melancholy",
+            "japanese",
+            "city pop",
+            "nostalgic",
+            "anime",
+            "80s",
+            "bittersweet",
+        ],
         description="Nostalgic 80s Tokyo dusk drive aesthetic with lush extensions and bittersweet descending cadences.",
         suggested_key="F",
         suggested_scale="major",
@@ -55,7 +63,16 @@ _VIBES_CATALOG: list[VibeDefinition] = [
     VibeDefinition(
         vibe_id="dreamy_lofi_nostalgia",
         title="Dreamy Lo-Fi Nostalgia",
-        mood_tags=["lofi", "nostalgia", "dreamy", "chill", "tape", "study", "vintage", "cozy"],
+        mood_tags=[
+            "lofi",
+            "nostalgia",
+            "dreamy",
+            "chill",
+            "tape",
+            "study",
+            "vintage",
+            "cozy",
+        ],
         description="Warm tape-saturated keys with bittersweet minor plagal resolution for reflective studying.",
         suggested_key="Eb",
         suggested_scale="major",
@@ -72,7 +89,16 @@ _VIBES_CATALOG: list[VibeDefinition] = [
     VibeDefinition(
         vibe_id="dark_cinematic_tension",
         title="Dark Cinematic Tension",
-        mood_tags=["dark", "cinematic", "tension", "phrygian", "suspense", "dramatic", "trailer", "ominous"],
+        mood_tags=[
+            "dark",
+            "cinematic",
+            "tension",
+            "phrygian",
+            "suspense",
+            "dramatic",
+            "trailer",
+            "ominous",
+        ],
         description="Unsettling psychological thriller tension and ominous dread built on Phrygian half-step shifts.",
         suggested_key="D",
         suggested_scale="minor",
@@ -89,7 +115,16 @@ _VIBES_CATALOG: list[VibeDefinition] = [
     VibeDefinition(
         vibe_id="euphoric_neo_soul",
         title="Euphoric Neo-Soul",
-        mood_tags=["neo-soul", "soul", "r&b", "euphoric", "warm", "jazzy", "lush", "gospel"],
+        mood_tags=[
+            "neo-soul",
+            "soul",
+            "r&b",
+            "euphoric",
+            "warm",
+            "jazzy",
+            "lush",
+            "gospel",
+        ],
         description="Warm, velvety Sunday afternoon neo-soul groove rich with colorful upper extensions.",
         suggested_key="Db",
         suggested_scale="major",
@@ -106,7 +141,17 @@ _VIBES_CATALOG: list[VibeDefinition] = [
     VibeDefinition(
         vibe_id="indie_sunshine_anthem",
         title="Indie Sunshine Anthem",
-        mood_tags=["indie", "sunshine", "anthem", "upbeat", "summer", "pop", "festival", "bright", "happy"],
+        mood_tags=[
+            "indie",
+            "sunshine",
+            "anthem",
+            "upbeat",
+            "summer",
+            "pop",
+            "festival",
+            "bright",
+            "happy",
+        ],
         description="Driving, euphoric festival pop-rock anthem with unstoppable singalong momentum.",
         suggested_key="G",
         suggested_scale="major",
@@ -123,7 +168,15 @@ _VIBES_CATALOG: list[VibeDefinition] = [
     VibeDefinition(
         vibe_id="sad_girl_autumn",
         title="Sad Girl Autumn",
-        mood_tags=["sad", "autumn", "melancholy", "acoustic", "singer-songwriter", "emotional", "folk"],
+        mood_tags=[
+            "sad",
+            "autumn",
+            "melancholy",
+            "acoustic",
+            "singer-songwriter",
+            "emotional",
+            "folk",
+        ],
         description="Intimate confessional songwriting drenched in rainy autumn nostalgia.",
         suggested_key="C",
         suggested_scale="major",
@@ -140,7 +193,16 @@ _VIBES_CATALOG: list[VibeDefinition] = [
     VibeDefinition(
         vibe_id="funky_dorian_groove",
         title="Funky Dorian Groove",
-        mood_tags=["funky", "dorian", "groove", "funk", "disco", "danceable", "70s", "vamp"],
+        mood_tags=[
+            "funky",
+            "dorian",
+            "groove",
+            "funk",
+            "disco",
+            "danceable",
+            "70s",
+            "vamp",
+        ],
         description="Hypnotic two-chord modal funk dance vamp dripping with late-night swagger.",
         suggested_key="D",
         suggested_scale="dorian",
@@ -174,7 +236,16 @@ _VIBES_CATALOG: list[VibeDefinition] = [
     VibeDefinition(
         vibe_id="gospel_uplift",
         title="Gospel Uplift",
-        mood_tags=["gospel", "uplift", "church", "spiritual", "joyful", "soulful", "praise", "hymn"],
+        mood_tags=[
+            "gospel",
+            "uplift",
+            "church",
+            "spiritual",
+            "joyful",
+            "soulful",
+            "praise",
+            "hymn",
+        ],
         description="Joyful Sunday morning church walk with moving bass and chromatic minor plagal release.",
         suggested_key="Ab",
         suggested_scale="major",
@@ -191,7 +262,16 @@ _VIBES_CATALOG: list[VibeDefinition] = [
     VibeDefinition(
         vibe_id="vaporwave_mall",
         title="Vaporwave Mall",
-        mood_tags=["vaporwave", "mall", "80s", "retro", "aesthetic", "smooth", "nostalgic", "chill"],
+        mood_tags=[
+            "vaporwave",
+            "mall",
+            "80s",
+            "retro",
+            "aesthetic",
+            "smooth",
+            "nostalgic",
+            "chill",
+        ],
         description="Dreamy slowed-down elevator jazz drifting through a neon 1989 shopping mall atrium.",
         suggested_key="Bb",
         suggested_scale="major",
@@ -208,7 +288,15 @@ _VIBES_CATALOG: list[VibeDefinition] = [
     VibeDefinition(
         vibe_id="cyberpunk_dystopia",
         title="Cyberpunk Dystopia",
-        mood_tags=["cyberpunk", "dystopian", "industrial", "dark", "sci-fi", "synthetic", "relentless"],
+        mood_tags=[
+            "cyberpunk",
+            "dystopian",
+            "industrial",
+            "dark",
+            "sci-fi",
+            "synthetic",
+            "relentless",
+        ],
         description="Gritty neon-drenched dystopia driven by relentless Aeolian natural minor power movements.",
         suggested_key="E",
         suggested_scale="minor",
@@ -225,7 +313,16 @@ _VIBES_CATALOG: list[VibeDefinition] = [
     VibeDefinition(
         vibe_id="bossa_sunset",
         title="Bossa Sunset",
-        mood_tags=["bossa", "latin", "sunset", "brazilian", "beach", "warm", "jazz", "acoustic"],
+        mood_tags=[
+            "bossa",
+            "latin",
+            "sunset",
+            "brazilian",
+            "beach",
+            "warm",
+            "jazz",
+            "acoustic",
+        ],
         description="Gentle Rio seaside breeze with warm syncopated acoustic jazz harmonies.",
         suggested_key="F",
         suggested_scale="major",
@@ -259,7 +356,9 @@ def get_vibe(vibe_id: str) -> VibeDefinition:
     vibe = _VIBES_BY_ID.get(normalized_id)
     if vibe is None:
         valid_ids = sorted(_VIBES_BY_ID.keys())
-        raise VibeNotFoundError(f"Unknown vibe_id: {vibe_id!r}. Valid options: {valid_ids}")
+        raise VibeNotFoundError(
+            f"Unknown vibe_id: {vibe_id!r}. Valid options: {valid_ids}"
+        )
     return vibe
 
 

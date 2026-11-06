@@ -38,15 +38,32 @@ _GROOVES_LIST: list[Groove] = [
         name="block",
         description="Simultaneous sustained chord tones for the full duration.",
         meter_beats=4.0,
-        pulses=(Pulse(beat_offset=0.0, duration_beats=4.0, velocity_scale=1.0, voice_target="all"),),
+        pulses=(
+            Pulse(
+                beat_offset=0.0,
+                duration_beats=4.0,
+                velocity_scale=1.0,
+                voice_target="all",
+            ),
+        ),
     ),
     Groove(
         name="charleston",
         description="Classic dotted-quarter (beat 1) and eighth-note stab (and-of-2) (Jazz, Neo-soul, House).",
         meter_beats=4.0,
         pulses=(
-            Pulse(beat_offset=0.0, duration_beats=1.0, velocity_scale=1.10, voice_target="all"),
-            Pulse(beat_offset=1.5, duration_beats=0.5, velocity_scale=0.95, voice_target="all"),
+            Pulse(
+                beat_offset=0.0,
+                duration_beats=1.0,
+                velocity_scale=1.10,
+                voice_target="all",
+            ),
+            Pulse(
+                beat_offset=1.5,
+                duration_beats=0.5,
+                velocity_scale=0.95,
+                voice_target="all",
+            ),
         ),
     ),
     Groove(
@@ -54,10 +71,30 @@ _GROOVES_LIST: list[Groove] = [
         description="Driving quarter-note pulses with alternating velocity accents (Indie rock, House piano).",
         meter_beats=4.0,
         pulses=(
-            Pulse(beat_offset=0.0, duration_beats=0.5, velocity_scale=1.10, voice_target="all"),
-            Pulse(beat_offset=1.0, duration_beats=0.5, velocity_scale=0.90, voice_target="all"),
-            Pulse(beat_offset=2.0, duration_beats=0.5, velocity_scale=1.00, voice_target="all"),
-            Pulse(beat_offset=3.0, duration_beats=0.5, velocity_scale=0.92, voice_target="all"),
+            Pulse(
+                beat_offset=0.0,
+                duration_beats=0.5,
+                velocity_scale=1.10,
+                voice_target="all",
+            ),
+            Pulse(
+                beat_offset=1.0,
+                duration_beats=0.5,
+                velocity_scale=0.90,
+                voice_target="all",
+            ),
+            Pulse(
+                beat_offset=2.0,
+                duration_beats=0.5,
+                velocity_scale=1.00,
+                voice_target="all",
+            ),
+            Pulse(
+                beat_offset=3.0,
+                duration_beats=0.5,
+                velocity_scale=0.92,
+                voice_target="all",
+            ),
         ),
     ),
     Groove(
@@ -65,12 +102,42 @@ _GROOVES_LIST: list[Groove] = [
         description="Brazilian Bossa Nova syncopation with half-note bass and offbeat upper chord stabs.",
         meter_beats=4.0,
         pulses=(
-            Pulse(beat_offset=0.0, duration_beats=1.5, velocity_scale=1.05, voice_target="bass"),
-            Pulse(beat_offset=2.0, duration_beats=1.5, velocity_scale=1.00, voice_target="bass"),
-            Pulse(beat_offset=0.0, duration_beats=0.5, velocity_scale=1.00, voice_target="upper"),
-            Pulse(beat_offset=1.5, duration_beats=0.5, velocity_scale=0.95, voice_target="upper"),
-            Pulse(beat_offset=2.5, duration_beats=0.5, velocity_scale=0.95, voice_target="upper"),
-            Pulse(beat_offset=3.5, duration_beats=0.5, velocity_scale=0.90, voice_target="upper"),
+            Pulse(
+                beat_offset=0.0,
+                duration_beats=1.5,
+                velocity_scale=1.05,
+                voice_target="bass",
+            ),
+            Pulse(
+                beat_offset=2.0,
+                duration_beats=1.5,
+                velocity_scale=1.00,
+                voice_target="bass",
+            ),
+            Pulse(
+                beat_offset=0.0,
+                duration_beats=0.5,
+                velocity_scale=1.00,
+                voice_target="upper",
+            ),
+            Pulse(
+                beat_offset=1.5,
+                duration_beats=0.5,
+                velocity_scale=0.95,
+                voice_target="upper",
+            ),
+            Pulse(
+                beat_offset=2.5,
+                duration_beats=0.5,
+                velocity_scale=0.95,
+                voice_target="upper",
+            ),
+            Pulse(
+                beat_offset=3.5,
+                duration_beats=0.5,
+                velocity_scale=0.90,
+                voice_target="upper",
+            ),
         ),
     ),
     Groove(
@@ -78,9 +145,24 @@ _GROOVES_LIST: list[Groove] = [
         description="3+3+2 syncopation (beats 0.0, 1.5, 3.0), foundational to Latin, Afrobeats, and modern pop.",
         meter_beats=4.0,
         pulses=(
-            Pulse(beat_offset=0.0, duration_beats=0.8, velocity_scale=1.15, voice_target="all"),
-            Pulse(beat_offset=1.5, duration_beats=0.8, velocity_scale=1.05, voice_target="all"),
-            Pulse(beat_offset=3.0, duration_beats=0.8, velocity_scale=0.95, voice_target="all"),
+            Pulse(
+                beat_offset=0.0,
+                duration_beats=0.8,
+                velocity_scale=1.15,
+                voice_target="all",
+            ),
+            Pulse(
+                beat_offset=1.5,
+                duration_beats=0.8,
+                velocity_scale=1.05,
+                voice_target="all",
+            ),
+            Pulse(
+                beat_offset=3.0,
+                duration_beats=0.8,
+                velocity_scale=0.95,
+                voice_target="all",
+            ),
         ),
     ),
     Groove(
@@ -88,10 +170,30 @@ _GROOVES_LIST: list[Groove] = [
         description="Upbeat offbeat chops on the 'and' of each beat (Reggae, Dub, Ska).",
         meter_beats=4.0,
         pulses=(
-            Pulse(beat_offset=0.5, duration_beats=0.35, velocity_scale=1.05, voice_target="upper"),
-            Pulse(beat_offset=1.5, duration_beats=0.35, velocity_scale=0.95, voice_target="upper"),
-            Pulse(beat_offset=2.5, duration_beats=0.35, velocity_scale=1.00, voice_target="upper"),
-            Pulse(beat_offset=3.5, duration_beats=0.35, velocity_scale=0.90, voice_target="upper"),
+            Pulse(
+                beat_offset=0.5,
+                duration_beats=0.35,
+                velocity_scale=1.05,
+                voice_target="upper",
+            ),
+            Pulse(
+                beat_offset=1.5,
+                duration_beats=0.35,
+                velocity_scale=0.95,
+                voice_target="upper",
+            ),
+            Pulse(
+                beat_offset=2.5,
+                duration_beats=0.35,
+                velocity_scale=1.00,
+                voice_target="upper",
+            ),
+            Pulse(
+                beat_offset=3.5,
+                duration_beats=0.35,
+                velocity_scale=0.90,
+                voice_target="upper",
+            ),
         ),
     ),
     Groove(
@@ -99,9 +201,24 @@ _GROOVES_LIST: list[Groove] = [
         description="3/4 meter comping: bass anchor on beat 1, upper chord chops on beats 2 and 3.",
         meter_beats=3.0,
         pulses=(
-            Pulse(beat_offset=0.0, duration_beats=0.85, velocity_scale=1.10, voice_target="bass"),
-            Pulse(beat_offset=1.0, duration_beats=0.65, velocity_scale=0.95, voice_target="upper"),
-            Pulse(beat_offset=2.0, duration_beats=0.65, velocity_scale=0.90, voice_target="upper"),
+            Pulse(
+                beat_offset=0.0,
+                duration_beats=0.85,
+                velocity_scale=1.10,
+                voice_target="bass",
+            ),
+            Pulse(
+                beat_offset=1.0,
+                duration_beats=0.65,
+                velocity_scale=0.95,
+                voice_target="upper",
+            ),
+            Pulse(
+                beat_offset=2.0,
+                duration_beats=0.65,
+                velocity_scale=0.90,
+                voice_target="upper",
+            ),
         ),
     ),
     Groove(
@@ -109,9 +226,24 @@ _GROOVES_LIST: list[Groove] = [
         description="Eighth-note syncopated pulse pattern on beats 0.0, 1.5, and 3.0.",
         meter_beats=4.0,
         pulses=(
-            Pulse(beat_offset=0.0, duration_beats=0.75, velocity_scale=1.05, voice_target="all"),
-            Pulse(beat_offset=1.5, duration_beats=0.75, velocity_scale=0.95, voice_target="all"),
-            Pulse(beat_offset=3.0, duration_beats=0.75, velocity_scale=1.00, voice_target="all"),
+            Pulse(
+                beat_offset=0.0,
+                duration_beats=0.75,
+                velocity_scale=1.05,
+                voice_target="all",
+            ),
+            Pulse(
+                beat_offset=1.5,
+                duration_beats=0.75,
+                velocity_scale=0.95,
+                voice_target="all",
+            ),
+            Pulse(
+                beat_offset=3.0,
+                duration_beats=0.75,
+                velocity_scale=1.00,
+                voice_target="all",
+            ),
         ),
     ),
 ]
@@ -142,7 +274,14 @@ def tile_groove_pulses(groove: Groove, total_duration_beats: float) -> list[Puls
     Otherwise repeats the pulses every meter_beats until total_duration_beats is reached.
     """
     if groove.name == "block":
-        return [Pulse(beat_offset=0.0, duration_beats=total_duration_beats, velocity_scale=1.0, voice_target="all")]
+        return [
+            Pulse(
+                beat_offset=0.0,
+                duration_beats=total_duration_beats,
+                velocity_scale=1.0,
+                voice_target="all",
+            )
+        ]
 
     pulses: list[Pulse] = []
     cycle = 0

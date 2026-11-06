@@ -24,7 +24,13 @@ def test_list_song_templates():
     templates = list_song_templates()
     assert len(templates) >= 5
     ids = {t.template_id for t in templates}
-    expected_ids = {"neo_soul", "pop_anthem", "lofi_chill", "cinematic_minor", "city_pop"}
+    expected_ids = {
+        "neo_soul",
+        "pop_anthem",
+        "lofi_chill",
+        "cinematic_minor",
+        "city_pop",
+    }
     assert expected_ids.issubset(ids)
 
 
@@ -61,8 +67,12 @@ def test_all_five_templates_generate_valid_notes_and_durations(template_id: str)
     cumulative_beats = 0.0
     for sec in arrangement.sections:
         assert isinstance(sec, GeneratedSongSection)
-        assert sec.notes_count > 0, f"Section {sec.section_plan.name} in {template_id} generated 0 notes"
-        assert sec.total_beats > 0.0, f"Section {sec.section_plan.name} in {template_id} has <= 0 total beats"
+        assert sec.notes_count > 0, (
+            f"Section {sec.section_plan.name} in {template_id} generated 0 notes"
+        )
+        assert sec.total_beats > 0.0, (
+            f"Section {sec.section_plan.name} in {template_id} has <= 0 total beats"
+        )
         # Each chord defaults to 4.0 beats, so section total beats must be a multiple of chord count
         num_chords = len(sec.generation_request.chords)
         assert sec.total_beats == num_chords * 4.0
@@ -169,7 +179,8 @@ def test_inject_song_into_ableton_with_live_client_osc_mock():
 
     # Ensure create_clip and note messages were sent for all 4 clips
     create_clip_calls = [
-        c for c in mock_udp.send_message.call_args_list
+        c
+        for c in mock_udp.send_message.call_args_list
         if c[0][0] == "/live/clip_slot/create_clip"
     ]
     assert len(create_clip_calls) == 4
@@ -181,12 +192,18 @@ def test_inject_song_into_ableton_with_live_client_osc_mock():
 def test_parse_section_chords_error_handling():
     # Empty progression
     empty_plan = SectionPlan(name="broken", progression="")
-    with pytest.raises(ValueError, match="Progression string in section 'broken' is empty"):
+    with pytest.raises(
+        ValueError, match="Progression string in section 'broken' is empty"
+    ):
         from midison.song import _parse_section_chords
+
         _parse_section_chords(empty_plan)
 
     # Invalid Roman numeral
     invalid_plan = SectionPlan(name="bad_numeral", progression="I - XYZ - V")
-    with pytest.raises(ValueError, match="Invalid Roman numeral 'XYZ' in section 'bad_numeral'"):
+    with pytest.raises(
+        ValueError, match="Invalid Roman numeral 'XYZ' in section 'bad_numeral'"
+    ):
         from midison.song import _parse_section_chords
+
         _parse_section_chords(invalid_plan)

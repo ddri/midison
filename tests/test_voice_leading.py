@@ -1,6 +1,5 @@
 """Tests for voice_leading.py."""
 
-
 from midison.theory import parse_pitch_class, parse_roman_numeral
 from midison.voice_leading import (
     _voicing_distance,
@@ -85,8 +84,12 @@ class TestBuildCandidates:
         # I in C major, close voicing, no explicit inversion -> 3 candidates
         parsed = parse_roman_numeral("I")
         candidates = build_candidates(
-            parsed, parse_pitch_class("C"), "major", octave=4,
-            voicing="close", explicit_inversion=False,
+            parsed,
+            parse_pitch_class("C"),
+            "major",
+            octave=4,
+            voicing="close",
+            explicit_inversion=False,
         )
         assert len(candidates) == 3
         # Inversion 0: [60, 64, 67] (root position)
@@ -96,8 +99,12 @@ class TestBuildCandidates:
         # I7 in C major, close voicing -> 4 candidates (root, 1st, 2nd, 3rd)
         parsed = parse_roman_numeral("I7")
         candidates = build_candidates(
-            parsed, parse_pitch_class("C"), "major", octave=4,
-            voicing="close", explicit_inversion=False,
+            parsed,
+            parse_pitch_class("C"),
+            "major",
+            octave=4,
+            voicing="close",
+            explicit_inversion=False,
         )
         assert len(candidates) == 4
 
@@ -105,8 +112,12 @@ class TestBuildCandidates:
         # V13 has 7 notes; cap = min(3, N-1) = min(3, 6) = 3, so 4 candidates
         parsed = parse_roman_numeral("V13")
         candidates = build_candidates(
-            parsed, parse_pitch_class("C"), "major", octave=4,
-            voicing="close", explicit_inversion=False,
+            parsed,
+            parse_pitch_class("C"),
+            "major",
+            octave=4,
+            voicing="close",
+            explicit_inversion=False,
         )
         assert len(candidates) == 4
         # Bottom note pitch class of every candidate must be a chord tone (R/3/5/7)
@@ -120,8 +131,12 @@ class TestBuildCandidates:
         # build_candidates should produce 4 candidates (one per inversion of the 4-note chord).
         parsed = parse_roman_numeral("Imaj7")
         candidates = build_candidates(
-            parsed, parse_pitch_class("C"), "major", octave=4,
-            voicing="close", explicit_inversion=False,
+            parsed,
+            parse_pitch_class("C"),
+            "major",
+            octave=4,
+            voicing="close",
+            explicit_inversion=False,
         )
         # Imaj7 has 4 notes → 4 inversion candidates
         assert len(candidates) == 4
@@ -130,8 +145,12 @@ class TestBuildCandidates:
         # V64 with explicit_inversion=True -> candidate set is {2} only
         parsed = parse_roman_numeral("V64")  # parses to inversion 2
         candidates = build_candidates(
-            parsed, parse_pitch_class("C"), "major", octave=4,
-            voicing="close", explicit_inversion=True,
+            parsed,
+            parse_pitch_class("C"),
+            "major",
+            octave=4,
+            voicing="close",
+            explicit_inversion=True,
         )
         assert len(candidates) == 1
         # V at 2nd inversion close = D-G-B = [74, 79, 83]

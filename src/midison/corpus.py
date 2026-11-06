@@ -322,7 +322,9 @@ def main() -> None:
     for builder in CORPUS:
         request = builder()
         result = generate(request, output_dir)
-        print(f"  ✓ {result.filepath.name}  ({len(result.resolved)} chords, {result.total_beats} beats)")
+        print(
+            f"  ✓ {result.filepath.name}  ({len(result.resolved)} chords, {result.total_beats} beats)"
+        )
 
     print(f"\nDone. {len(CORPUS)} files written.")
     print("Drag them into your DAW and audition each one to validate the theory layer.")

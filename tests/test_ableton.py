@@ -215,12 +215,15 @@ def test_inject_progression_auto_sync():
         selected_track=3,
         selected_scene=5,
     )
-    with patch.object(client, "query_session_state", return_value=mock_session), \
-         patch.object(client, "create_clip") as mock_create, \
-         patch.object(client, "add_notes"), \
-         patch.object(client, "fire_clip") as mock_fire:
-
-        res = client.inject_progression(req, track_index=None, clip_index=None, fire=True)
+    with (
+        patch.object(client, "query_session_state", return_value=mock_session),
+        patch.object(client, "create_clip") as mock_create,
+        patch.object(client, "add_notes"),
+        patch.object(client, "fire_clip") as mock_fire,
+    ):
+        res = client.inject_progression(
+            req, track_index=None, clip_index=None, fire=True
+        )
 
     assert res["status"] == "success"
     assert res["track_index"] == 3
@@ -228,4 +231,3 @@ def test_inject_progression_auto_sync():
     assert res["session_synced"] is True
     mock_create.assert_called_once_with(3, 5, 4.0)
     mock_fire.assert_called_once_with(3, 5)
-

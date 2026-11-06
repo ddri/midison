@@ -12,7 +12,9 @@ from midison.suggest import (
 from midison.theory import parse_roman_numeral
 
 
-def _assert_valid_suggestions(suggestions: list[ChordSuggestion], expected_min: int = 4, expected_max: int = 6) -> None:
+def _assert_valid_suggestions(
+    suggestions: list[ChordSuggestion], expected_min: int = 4, expected_max: int = 6
+) -> None:
     """Helper to verify common invariants across any suggestion list."""
     assert expected_min <= len(suggestions) <= expected_max, (
         f"Expected between {expected_min} and {expected_max} suggestions, got {len(suggestions)}"
@@ -246,14 +248,18 @@ class TestProgressionParsing:
 
     def test_multi_chord_progression(self):
         # In 'ii7 - V7', recommender inspects V7
-        suggestions = suggest_next_chords("ii7 - V7", key_center="C", scale_type="major")
+        suggestions = suggest_next_chords(
+            "ii7 - V7", key_center="C", scale_type="major"
+        )
         _assert_valid_suggestions(suggestions)
         numerals = [s.numeral for s in suggestions]
         assert "Imaj7" in numerals or "vi7" in numerals
 
     def test_progression_with_durations(self):
         # In 'ii7:2 - V7:2', recommender inspects V7
-        suggestions = suggest_next_chords("ii7:2 - V7:2", key_center="C", scale_type="major")
+        suggestions = suggest_next_chords(
+            "ii7:2 - V7:2", key_center="C", scale_type="major"
+        )
         _assert_valid_suggestions(suggestions)
         numerals = [s.numeral for s in suggestions]
         assert "Imaj7" in numerals or "vi7" in numerals

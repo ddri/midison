@@ -119,8 +119,13 @@ def test_generator_patcher_presentation_and_controls():
 
     # Presentation rects on all interactive widgets, and ensure all fit within 144px
     interactive_ids = [
-        "obj-menu-preset", "obj-menu-voicing", "obj-menu-groove",
-        "obj-num-oct", "obj-btn-human", "obj-btn-lead", "obj-btn-rootless"
+        "obj-menu-preset",
+        "obj-menu-voicing",
+        "obj-menu-groove",
+        "obj-num-oct",
+        "obj-btn-human",
+        "obj-btn-lead",
+        "obj-btn-rootless",
     ]
     for bid in interactive_ids:
         box = box_ids[bid]
@@ -150,8 +155,12 @@ def test_generator_embedded_js_syntax():
 
     # Check key function names
     for fn in [
-        "function generate", "function dictionary", "function preset",
-        "function preset_idx", "function voicing", "function groove"
+        "function generate",
+        "function dictionary",
+        "function preset",
+        "function preset_idx",
+        "function voicing",
+        "function groove",
     ]:
         assert fn in MIDISON_GENERATOR_JS
 
@@ -179,7 +188,9 @@ def test_generator_embedded_js_syntax():
     humanize(1);
     generate();
     """
-    res = subprocess.run(["node", "-e", script], check=False, capture_output=True, text=True)
+    res = subprocess.run(
+        ["node", "-e", script], check=False, capture_output=True, text=True
+    )
     assert res.returncode == 0, f"Node syntax validation failed: {res.stderr}"
 
 
@@ -212,7 +223,9 @@ def test_generator_js_musical_timing_and_chords():
 
     console.log(JSON.stringify(outputPayload));
     """
-    res = subprocess.run(["node", "-e", script], check=False, capture_output=True, text=True)
+    res = subprocess.run(
+        ["node", "-e", script], check=False, capture_output=True, text=True
+    )
     assert res.returncode == 0, f"Node failed: {res.stderr}"
 
     payload = json.loads(res.stdout)
@@ -266,7 +279,9 @@ def test_generator_js_section_and_slash_chord():
 
     console.log(JSON.stringify(outputPayload));
     """
-    res = subprocess.run(["node", "-e", script], check=False, capture_output=True, text=True)
+    res = subprocess.run(
+        ["node", "-e", script], check=False, capture_output=True, text=True
+    )
     assert res.returncode == 0, f"Node failed: {res.stderr}"
 
     payload = json.loads(res.stdout)
@@ -281,6 +296,3 @@ def test_generator_js_section_and_slash_chord():
     assert len(chord2_notes) >= 3
     lowest_pitch = chord2_notes[0]["pitch"]
     assert lowest_pitch % 12 == 4  # E in the bass!
-
-
-

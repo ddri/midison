@@ -24,8 +24,8 @@ if TYPE_CHECKING:
 
 @dataclass
 class SectionPlan:
-    name: str                 # 'verse', 'pre_chorus', 'chorus', 'bridge', 'outro'
-    progression: str          # Roman numeral progression string, e.g. 'ii7 - V7 - Imaj7'
+    name: str  # 'verse', 'pre_chorus', 'chorus', 'bridge', 'outro'
+    progression: str  # Roman numeral progression string, e.g. 'ii7 - V7 - Imaj7'
     duration_beats_per_chord: float = 4.0
     voicing: str = "drop2"
     pattern: str = "block"
@@ -35,7 +35,9 @@ class SectionPlan:
 
 @dataclass
 class SongTemplate:
-    template_id: str          # 'neo_soul', 'pop_anthem', 'lofi_chill', 'cinematic_minor', 'city_pop'
+    template_id: (
+        str  # 'neo_soul', 'pop_anthem', 'lofi_chill', 'cinematic_minor', 'city_pop'
+    )
     name: str
     description: str
     recommended_bpm: int
@@ -305,6 +307,7 @@ CURATED_TEMPLATES: dict[str, SongTemplate] = {
 # Template Query Functions
 # ---------------------------------------------------------------------------
 
+
 def list_song_templates() -> list[SongTemplate]:
     """Return a list of all curated song templates."""
     return list(CURATED_TEMPLATES.values())
@@ -314,13 +317,16 @@ def get_song_template(template_id: str) -> SongTemplate:
     """Retrieve a specific song template by its ID."""
     if template_id not in CURATED_TEMPLATES:
         available = ", ".join(CURATED_TEMPLATES.keys())
-        raise ValueError(f"Unknown template ID '{template_id}'. Available templates: {available}")
+        raise ValueError(
+            f"Unknown template ID '{template_id}'. Available templates: {available}"
+        )
     return CURATED_TEMPLATES[template_id]
 
 
 # ---------------------------------------------------------------------------
 # Section & Arrangement Generation
 # ---------------------------------------------------------------------------
+
 
 def _parse_section_chords(plan: SectionPlan) -> list[ChordSpec]:
     """Parse a section's progression string into a list of ChordSpec objects."""
@@ -346,7 +352,9 @@ def _parse_section_chords(plan: SectionPlan) -> list[ChordSpec]:
                 if duration <= 0:
                     raise ValueError
             except ValueError:
-                raise ValueError(f"Invalid duration '{dur_str}' in token '{tok}' in section '{plan.name}'")
+                raise ValueError(
+                    f"Invalid duration '{dur_str}' in token '{tok}' in section '{plan.name}'"
+                )
         else:
             numeral = tok
             duration = plan.duration_beats_per_chord
@@ -386,7 +394,9 @@ def generate_song_arrangement(
     """
     template = get_song_template(template_id)
     resolved_key = key_center if key_center is not None else template.recommended_key
-    resolved_scale = scale_type if scale_type is not None else template.recommended_scale
+    resolved_scale = (
+        scale_type if scale_type is not None else template.recommended_scale
+    )
     resolved_bpm = bpm if bpm is not None else template.recommended_bpm
 
     if output_dir is not None:
@@ -458,6 +468,7 @@ def generate_song_arrangement(
 # Ableton Live Scene Synchronization
 # ---------------------------------------------------------------------------
 
+
 def inject_song_into_ableton(
     arrangement: SongArrangement,
     client: AbletonClient,
@@ -487,13 +498,15 @@ def inject_song_into_ableton(
             res_dict["section_index"] = scene_idx
             results.append(res_dict)
         else:
-            results.append({
-                "status": "success",
-                "track_index": track_index,
-                "clip_index": scene_idx,
-                "section_name": sec.section_plan.name,
-                "section_index": scene_idx,
-                "result": res,
-            })
+            results.append(
+                {
+                    "status": "success",
+                    "track_index": track_index,
+                    "clip_index": scene_idx,
+                    "section_name": sec.section_plan.name,
+                    "section_index": scene_idx,
+                    "result": res,
+                }
+            )
 
     return results

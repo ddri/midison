@@ -19,14 +19,57 @@ from dataclasses import dataclass
 # Pitch class primitives
 # ---------------------------------------------------------------------------
 
-PITCH_CLASS_NAMES_SHARP = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
-PITCH_CLASS_NAMES_FLAT = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"]
+PITCH_CLASS_NAMES_SHARP = [
+    "C",
+    "C#",
+    "D",
+    "D#",
+    "E",
+    "F",
+    "F#",
+    "G",
+    "G#",
+    "A",
+    "A#",
+    "B",
+]
+PITCH_CLASS_NAMES_FLAT = [
+    "C",
+    "Db",
+    "D",
+    "Eb",
+    "E",
+    "F",
+    "Gb",
+    "G",
+    "Ab",
+    "A",
+    "Bb",
+    "B",
+]
 
 NOTE_TO_PITCH_CLASS = {
-    "C": 0, "C#": 1, "Db": 1, "D": 2, "D#": 3, "Eb": 3,
-    "E": 4, "Fb": 4, "E#": 5, "F": 5, "F#": 6, "Gb": 6,
-    "G": 7, "G#": 8, "Ab": 8, "A": 9, "A#": 10, "Bb": 10,
-    "B": 11, "Cb": 11, "B#": 0,
+    "C": 0,
+    "C#": 1,
+    "Db": 1,
+    "D": 2,
+    "D#": 3,
+    "Eb": 3,
+    "E": 4,
+    "Fb": 4,
+    "E#": 5,
+    "F": 5,
+    "F#": 6,
+    "Gb": 6,
+    "G": 7,
+    "G#": 8,
+    "Ab": 8,
+    "A": 9,
+    "A#": 10,
+    "Bb": 10,
+    "B": 11,
+    "Cb": 11,
+    "B#": 0,
 }
 
 
@@ -56,39 +99,39 @@ def midi_note_name(midi: int, prefer_flats: bool = False) -> str:
 
 # Intervals from tonic in semitones for each diatonic mode.
 MODE_INTERVALS: dict[str, tuple[int, ...]] = {
-    "major":      (0, 2, 4, 5, 7, 9, 11),   # Ionian
-    "ionian":     (0, 2, 4, 5, 7, 9, 11),
-    "dorian":     (0, 2, 3, 5, 7, 9, 10),
-    "phrygian":   (0, 1, 3, 5, 7, 8, 10),
-    "lydian":     (0, 2, 4, 6, 7, 9, 11),
+    "major": (0, 2, 4, 5, 7, 9, 11),  # Ionian
+    "ionian": (0, 2, 4, 5, 7, 9, 11),
+    "dorian": (0, 2, 3, 5, 7, 9, 10),
+    "phrygian": (0, 1, 3, 5, 7, 8, 10),
+    "lydian": (0, 2, 4, 6, 7, 9, 11),
     "mixolydian": (0, 2, 4, 5, 7, 9, 10),
-    "minor":              (0, 2, 3, 5, 7, 8, 10),   # Aeolian (natural minor)
-    "aeolian":            (0, 2, 3, 5, 7, 8, 10),
-    "locrian":            (0, 1, 3, 5, 6, 8, 10),
-    "harmonic_minor":     (0, 2, 3, 5, 7, 8, 11),
-    "melodic_minor":      (0, 2, 3, 5, 7, 9, 11),
+    "minor": (0, 2, 3, 5, 7, 8, 10),  # Aeolian (natural minor)
+    "aeolian": (0, 2, 3, 5, 7, 8, 10),
+    "locrian": (0, 1, 3, 5, 6, 8, 10),
+    "harmonic_minor": (0, 2, 3, 5, 7, 8, 11),
+    "melodic_minor": (0, 2, 3, 5, 7, 9, 11),
     "phrygian_dominant": (0, 1, 4, 5, 7, 8, 10),
-    "lydian_dominant":   (0, 2, 4, 6, 7, 9, 10),
-    "altered":            (0, 1, 3, 4, 6, 8, 10),
+    "lydian_dominant": (0, 2, 4, 6, 7, 9, 10),
+    "altered": (0, 1, 3, 4, 6, 8, 10),
 }
 
 # Default triad quality on each scale degree per mode.
 # 'M' = major, 'm' = minor, 'd' = diminished, 'A' = augmented.
 MODE_TRIAD_QUALITIES: dict[str, tuple[str, ...]] = {
-    "major":              ("M", "m", "m", "M", "M", "m", "d"),
-    "ionian":             ("M", "m", "m", "M", "M", "m", "d"),
-    "dorian":             ("m", "m", "M", "M", "m", "d", "M"),
-    "phrygian":           ("m", "M", "M", "m", "d", "M", "m"),
-    "lydian":             ("M", "M", "m", "d", "M", "m", "m"),
-    "mixolydian":         ("M", "m", "d", "M", "m", "m", "M"),
-    "minor":              ("m", "d", "M", "m", "m", "M", "M"),
-    "aeolian":            ("m", "d", "M", "m", "m", "M", "M"),
-    "locrian":            ("d", "M", "m", "m", "M", "M", "m"),
-    "harmonic_minor":     ("m", "d", "A", "m", "M", "M", "d"),
-    "melodic_minor":      ("m", "m", "A", "M", "M", "d", "d"),
+    "major": ("M", "m", "m", "M", "M", "m", "d"),
+    "ionian": ("M", "m", "m", "M", "M", "m", "d"),
+    "dorian": ("m", "m", "M", "M", "m", "d", "M"),
+    "phrygian": ("m", "M", "M", "m", "d", "M", "m"),
+    "lydian": ("M", "M", "m", "d", "M", "m", "m"),
+    "mixolydian": ("M", "m", "d", "M", "m", "m", "M"),
+    "minor": ("m", "d", "M", "m", "m", "M", "M"),
+    "aeolian": ("m", "d", "M", "m", "m", "M", "M"),
+    "locrian": ("d", "M", "m", "m", "M", "M", "m"),
+    "harmonic_minor": ("m", "d", "A", "m", "M", "M", "d"),
+    "melodic_minor": ("m", "m", "A", "M", "M", "d", "d"),
     "phrygian_dominant": ("M", "M", "d", "m", "d", "M", "m"),
-    "lydian_dominant":   ("M", "m", "d", "d", "m", "m", "M"),
-    "altered":            ("d", "m", "m", "M", "M", "M", "m"),
+    "lydian_dominant": ("M", "m", "d", "d", "m", "m", "M"),
+    "altered": ("d", "m", "m", "M", "M", "M", "m"),
 }
 
 
@@ -126,19 +169,20 @@ LETTER_TO_DEGREE = {"C": 1, "D": 2, "E": 3, "F": 4, "G": 5, "A": 6, "B": 7}
 @dataclass
 class ParsedNumeral:
     """A parsed Roman numeral, fully resolved against a key + mode."""
+
     raw: str
-    degree: int                      # 1..7 within the (possibly secondary) key
-    quality: str                     # 'M' | 'm' | 'd' | 'A'
-    extensions: tuple[int, ...]      # e.g. (7,) or (7, 9, 13). Always sorted.
-    alterations: tuple[str, ...]     # e.g. ('b9', '#11')
-    inversion: int                   # 0..3, derived from slash or explicit
-    accidental: int                  # semitone offset on the root: -1 (b), 0, +1 (#)
+    degree: int  # 1..7 within the (possibly secondary) key
+    quality: str  # 'M' | 'm' | 'd' | 'A'
+    extensions: tuple[int, ...]  # e.g. (7,) or (7, 9, 13). Always sorted.
+    alterations: tuple[str, ...]  # e.g. ('b9', '#11')
+    inversion: int  # 0..3, derived from slash or explicit
+    accidental: int  # semitone offset on the root: -1 (b), 0, +1 (#)
     secondary_of: int | None = None  # if 'V/vi', this is 6 (the target degree)
-    bass_degree: int | None = None   # for slash chords like 'I/3' or 'V/B'
-    bass_interval: int | None = None # 1, 3, 5, 7 for chord interval in bass
-    bass_pc: int | None = None       # explicit pitch class (0..11) for letter bass
-    bass_accidental: int = 0         # accidental on bass degree (e.g. b7)
-    root_pc: int | None = None       # explicit root pitch class (0..11) for letter chords
+    bass_degree: int | None = None  # for slash chords like 'I/3' or 'V/B'
+    bass_interval: int | None = None  # 1, 3, 5, 7 for chord interval in bass
+    bass_pc: int | None = None  # explicit pitch class (0..11) for letter bass
+    bass_accidental: int = 0  # accidental on bass degree (e.g. b7)
+    root_pc: int | None = None  # explicit root pitch class (0..11) for letter chords
 
     @property
     def has_bass_override(self) -> bool:
@@ -281,7 +325,7 @@ def parse_roman_numeral(raw: str) -> ParsedNumeral:
         if not numeral_match:
             raise ValueError(f"Could not find Roman numeral in {raw!r}")
         numeral = numeral_match.group(1)
-        s = s[numeral_match.end():]
+        s = s[numeral_match.end() :]
         degree = ROMAN_TO_DEGREE[numeral.upper()]
         is_uppercase = numeral.isupper()
 
@@ -320,7 +364,7 @@ def parse_roman_numeral(raw: str) -> ParsedNumeral:
                     for implied in (7, 9, 11):
                         if implied < n and implied not in extensions:
                             extensions.append(implied)
-                    s = s[len(tok):]
+                    s = s[len(tok) :]
                     matched = True
                     extensions.append(-7)  # sentinel: maj7
                     break
@@ -330,7 +374,7 @@ def parse_roman_numeral(raw: str) -> ParsedNumeral:
                     for implied in (7, 9, 11):
                         if implied < n and implied not in extensions:
                             extensions.append(implied)
-                    s = s[len(tok):]
+                    s = s[len(tok) :]
                     matched = True
                     break
         if not matched:
@@ -361,8 +405,19 @@ def parse_roman_numeral(raw: str) -> ParsedNumeral:
 
     # If bass_pc is given and slash_inversion was not explicitly set:
     if slash_inversion is None and bass_pc is not None and root_pc is not None:
-        third_pc = (root_pc + (3 if quality in (QUALITY_MINOR, QUALITY_DIMINISHED) else 4)) % 12
-        fifth_pc = (root_pc + (6 if quality == QUALITY_DIMINISHED else 8 if quality == QUALITY_AUGMENTED else 7)) % 12
+        third_pc = (
+            root_pc + (3 if quality in (QUALITY_MINOR, QUALITY_DIMINISHED) else 4)
+        ) % 12
+        fifth_pc = (
+            root_pc
+            + (
+                6
+                if quality == QUALITY_DIMINISHED
+                else 8
+                if quality == QUALITY_AUGMENTED
+                else 7
+            )
+        ) % 12
         seventh_pc = (root_pc + (11 if -7 in extensions else 10)) % 12
         if bass_pc == third_pc:
             inversion = 1
@@ -415,24 +470,26 @@ def _numeral_to_degree(s: str) -> int:
 # Chord building
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class ResolvedChord:
     """A fully resolved chord: pitch classes and a suggested register."""
+
     numeral: str
     root_pc: int
     quality: str
-    pitch_classes: tuple[int, ...]   # in chord-tone order: root, 3rd, 5th, ...
-    midi_notes: tuple[int, ...]      # voiced in a specific octave
+    pitch_classes: tuple[int, ...]  # in chord-tone order: root, 3rd, 5th, ...
+    midi_notes: tuple[int, ...]  # voiced in a specific octave
     inversion: int = 0
     bass_pc: int | None = None
 
 
 # Triad interval signatures from the root, in semitones.
 TRIAD_INTERVALS = {
-    QUALITY_MAJOR:      (0, 4, 7),
-    QUALITY_MINOR:      (0, 3, 7),
+    QUALITY_MAJOR: (0, 4, 7),
+    QUALITY_MINOR: (0, 3, 7),
     QUALITY_DIMINISHED: (0, 3, 6),
-    QUALITY_AUGMENTED:  (0, 4, 8),
+    QUALITY_AUGMENTED: (0, 4, 8),
 }
 
 
@@ -534,11 +591,17 @@ def build_chord(
         # Determine inversion based on target_bass_pc
         if target_bass_pc == root_pc:
             inversion = 0
-        elif target_bass_pc in [(root_pc + iv) % 12 for iv in intervals if 2 <= iv <= 5]:
+        elif target_bass_pc in [
+            (root_pc + iv) % 12 for iv in intervals if 2 <= iv <= 5
+        ]:
             inversion = 1
-        elif target_bass_pc in [(root_pc + iv) % 12 for iv in intervals if 6 <= iv <= 8]:
+        elif target_bass_pc in [
+            (root_pc + iv) % 12 for iv in intervals if 6 <= iv <= 8
+        ]:
             inversion = 2
-        elif target_bass_pc in [(root_pc + iv) % 12 for iv in intervals if 9 <= iv <= 11]:
+        elif target_bass_pc in [
+            (root_pc + iv) % 12 for iv in intervals if 9 <= iv <= 11
+        ]:
             inversion = 3
 
         notes = list(midi_notes)

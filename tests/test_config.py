@@ -29,7 +29,9 @@ def test_default_output_directory_when_no_config(isolated_config_dir, tmp_path):
     assert result == tmp_path / "Music" / "midison"
 
 
-def test_legacy_output_directory_fallback_when_banjo_exists(isolated_config_dir, tmp_path):
+def test_legacy_output_directory_fallback_when_banjo_exists(
+    isolated_config_dir, tmp_path
+):
     legacy_out = tmp_path / "Music" / "banjo"
     legacy_out.mkdir(parents=True)
     result = config.get_output_directory()
