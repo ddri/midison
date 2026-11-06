@@ -28,11 +28,16 @@ def apply_voicing(
     voicing: VoicingName,
     bass_note: int | None = None,
     bass_pc: int | None = None,
+    root_pc: int | None = None,
 ) -> list[int]:
     """Dispatch to the named voicing transformation.
 
     If bass_note or bass_pc is provided (explicit slash chord bass override),
     anchors that bass pitch class at the bottom of the voicing.
+
+    root_pc identifies the chord root for the 'rootless' voicing so the root
+    is removed by pitch class even when the chord is inverted. Without it,
+    'rootless' falls back to dropping the lowest note.
     """
     notes = sorted(notes)
     if voicing == "close":
@@ -46,7 +51,7 @@ def apply_voicing(
     elif voicing == "spread":
         result = _spread(notes)
     elif voicing == "rootless":
-        result = _rootless(notes)
+        result = _rootless(notes, root_pc)
     else:
         raise ValueError(f"Unknown voicing: {voicing!r}")
 
@@ -138,11 +143,19 @@ def _spread(notes: list[int]) -> list[int]:
     return sorted(notes)
 
 
-def _rootless(notes: list[int]) -> list[int]:
+def _rootless(notes: list[int], root_pc: int | None = None) -> list[int]:
     """
     Omit the root entirely. The next-lowest chord tone (typically the 3rd)
     becomes the bass.
+
+    When root_pc is known, every note of that pitch class is removed, so an
+    inverted chord (where the root is not the lowest note) still loses its
+    root rather than its bass. When root_pc is None, the lowest note is
+    assumed to be the root.
     """
     if len(notes) <= 1:
         return notes
-    return notes[1:]
+    if root_pc is None:
+        return notes[1:]
+    kept = [n for n in notes if n % 12 != root_pc]
+    return kept if kept else notes

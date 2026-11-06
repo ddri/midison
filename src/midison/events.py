@@ -16,7 +16,6 @@ from typing import TYPE_CHECKING
 from midison.grooves import get_groove, select_voices, tile_groove_pulses
 from midison.theory import (
     ParsedNumeral,
-    ResolvedChord,
     build_chord,
     midi_note_name,
     parse_pitch_class,
@@ -77,9 +76,7 @@ def resolve_progression_notes(request: GenerationRequest) -> ResolvedProgression
     rng = random.Random(request.seed) if request.seed is not None else random.Random()  # nosec B311
     key_pc = parse_pitch_class(request.key_center)
 
-    resolved_chords: list[
-        tuple[ChordSpec, ParsedNumeral, ResolvedChord, list[int]]
-    ] = []
+    resolved_chords: list[tuple[ChordSpec, ParsedNumeral, list[int]]] = []
     previous_voiced: list[int] | None = None
 
     for spec in request.chords:
@@ -100,7 +97,7 @@ def resolve_progression_notes(request: GenerationRequest) -> ResolvedProgression
                 request.scale_type,
                 request.octave,
                 spec.voicing,
-                explicit_inversion,
+                explicit_inversion=explicit_inversion,
             )
             chosen_inv, voiced = choose_voicing_position(candidates, previous_voiced)
             parsed.inversion = chosen_inv
@@ -110,10 +107,12 @@ def resolve_progression_notes(request: GenerationRequest) -> ResolvedProgression
             )
 
         if spec.rootless:
-            voiced = apply_voicing(voiced, "rootless", bass_pc=chord.bass_pc)
+            voiced = apply_voicing(
+                voiced, "rootless", bass_pc=chord.bass_pc, root_pc=chord.root_pc
+            )
 
         voiced = _clamp_to_max_octave(voiced, request.max_octave)
-        resolved_chords.append((spec, parsed, chord, voiced))
+        resolved_chords.append((spec, parsed, voiced))
         previous_voiced = voiced
 
     beat_offsets: list[float] = []
@@ -124,7 +123,7 @@ def resolve_progression_notes(request: GenerationRequest) -> ResolvedProgression
     total_beats = _beat
 
     resolved_metadata: list[dict] = []
-    for i, (spec, parsed, chord, voiced) in enumerate(resolved_chords):
+    for i, (spec, parsed, voiced) in enumerate(resolved_chords):
         resolved_metadata.append(
             {
                 "numeral": spec.numeral,
@@ -141,7 +140,7 @@ def resolve_progression_notes(request: GenerationRequest) -> ResolvedProgression
     timed_notes: list[TimedNote] = []
     seconds_per_beat = 60.0 / request.bpm
 
-    for i, (spec, parsed, chord, voiced) in enumerate(resolved_chords):
+    for i, (spec, parsed, voiced) in enumerate(resolved_chords):
         chord_start_beat = beat_offsets[i]
         chord_duration = spec.duration_beats
         pattern = spec.pattern

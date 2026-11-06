@@ -82,6 +82,7 @@ def build_candidates(
     mode: str,
     octave: int,
     voicing: VoicingName,
+    *,
     explicit_inversion: bool,
 ) -> list[list[int]]:
     """

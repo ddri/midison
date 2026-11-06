@@ -17,7 +17,6 @@ import mido
 from midison.grooves import get_groove, select_voices, tile_groove_pulses
 from midison.theory import (
     ParsedNumeral,
-    ResolvedChord,
     build_chord,
     midi_note_name,
     parse_pitch_class,
@@ -89,9 +88,7 @@ def generate(request: GenerationRequest, output_dir: Path) -> GenerationResult:
     key_pc = parse_pitch_class(request.key_center)
 
     # Resolve every chord into MIDI notes.
-    resolved_chords: list[
-        tuple[ChordSpec, ParsedNumeral, ResolvedChord, list[int]]
-    ] = []
+    resolved_chords: list[tuple[ChordSpec, ParsedNumeral, list[int]]] = []
     previous_voiced: list[int] | None = None
     for spec in request.chords:
         parsed = parse_roman_numeral(spec.numeral)
@@ -115,7 +112,7 @@ def generate(request: GenerationRequest, output_dir: Path) -> GenerationResult:
                 request.scale_type,
                 request.octave,
                 spec.voicing,
-                explicit_inversion,
+                explicit_inversion=explicit_inversion,
             )
             chosen_inv, voiced = choose_voicing_position(candidates, previous_voiced)
             # Update parsed.inversion so the resolved metadata reports the
@@ -129,12 +126,14 @@ def generate(request: GenerationRequest, output_dir: Path) -> GenerationResult:
 
         # Step 3: rootless — strip root after voice leading so VL sees the full chord
         if spec.rootless:
-            voiced = apply_voicing(voiced, "rootless", bass_pc=chord.bass_pc)
+            voiced = apply_voicing(
+                voiced, "rootless", bass_pc=chord.bass_pc, root_pc=chord.root_pc
+            )
 
         # Step 4: max_octave clamp — hard ceiling applied last
         voiced = _clamp_to_max_octave(voiced, request.max_octave)
 
-        resolved_chords.append((spec, parsed, chord, voiced))
+        resolved_chords.append((spec, parsed, voiced))
         previous_voiced = voiced
 
     # Pre-compute beat offsets once; both the metadata loop and MIDI event loop use them.
@@ -173,7 +172,7 @@ def generate(request: GenerationRequest, output_dir: Path) -> GenerationResult:
 
     # Build resolved metadata for each chord.
     resolved_metadata: list[dict] = []
-    for i, (spec, parsed, chord, voiced) in enumerate(resolved_chords):
+    for i, (spec, parsed, voiced) in enumerate(resolved_chords):
         resolved_metadata.append(
             {
                 "numeral": spec.numeral,
@@ -194,7 +193,7 @@ def generate(request: GenerationRequest, output_dir: Path) -> GenerationResult:
     all_events: list[tuple[int, int, str, int, int]] = []
     # (abs_tick, ordering_key, type, note, velocity); ordering_key ensures
     # off-events at the same tick precede on-events.
-    for i, (spec, parsed, chord, voiced) in enumerate(resolved_chords):
+    for i, (spec, parsed, voiced) in enumerate(resolved_chords):
         duration_ticks = round(spec.duration_beats * TICKS_PER_BEAT)
         chord_start_tick = round(beat_offsets[i] * TICKS_PER_BEAT)
 

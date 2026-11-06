@@ -1,5 +1,7 @@
 """Tests for voice_leading.py."""
 
+import pytest
+
 from midison.theory import parse_pitch_class, parse_roman_numeral
 from midison.voice_leading import (
     _voicing_distance,
@@ -140,6 +142,13 @@ class TestBuildCandidates:
         )
         # Imaj7 has 4 notes → 4 inversion candidates
         assert len(candidates) == 4
+
+    def test_explicit_inversion_is_keyword_only(self):
+        # A bare positional boolean is opaque at call sites; the signature
+        # forces the keyword form.
+        parsed = parse_roman_numeral("V64")
+        with pytest.raises(TypeError):
+            build_candidates(parsed, parse_pitch_class("C"), "major", 4, "close", True)
 
     def test_explicit_inversion_yields_single_candidate(self):
         # V64 with explicit_inversion=True -> candidate set is {2} only

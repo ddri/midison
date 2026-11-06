@@ -474,8 +474,14 @@ class TestVoiceLead:
             voice_lead=True,
         )
         result = generate(request, tmp_path)
-        # rootless of ii7 -> 3 notes
-        assert len(result.resolved[1]["midi"]) == 3
+        ii7 = result.resolved[1]["midi"]
+        # rootless of ii7 (D-F-A-C) -> 3 notes
+        assert len(ii7) == 3
+        # Structural check: the *root* D must be the voice that was dropped,
+        # whatever inversion voice leading picked. F-A-C must all survive.
+        pcs = {n % 12 for n in ii7}
+        assert 2 not in pcs, f"root D survived rootless: {ii7}"
+        assert pcs == {5, 9, 0}, f"expected F-A-C pitch classes, got {ii7}"
 
     def test_register_stability_chromatic_mediant_chain(self, tmp_path):
         """

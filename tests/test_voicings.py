@@ -39,6 +39,20 @@ class TestVoicings:
         assert result == [64, 67, 71]
         assert len(result) == len(self.CMAJ7) - 1
 
+    def test_rootless_drops_root_by_pitch_class_when_inverted(self):
+        # Dm7 in 3rd inversion: C3 D3 F3 A3. Root is D (pc 2), not the bass.
+        result = apply_voicing([48, 50, 53, 57], "rootless", root_pc=2)
+        assert result == [48, 53, 57]
+
+    def test_rootless_drops_every_root_octave(self):
+        # Doubled root C3 + C4 in Cmaj7 voicing: both copies go.
+        result = apply_voicing([48, 52, 55, 59, 60], "rootless", root_pc=0)
+        assert result == [52, 55, 59]
+
+    def test_rootless_without_root_pc_falls_back_to_lowest(self):
+        # Legacy behaviour when the caller cannot name the root.
+        assert apply_voicing([48, 50, 53, 57], "rootless") == [50, 53, 57]
+
     def test_unknown_voicing_raises(self):
         with pytest.raises(ValueError):
             apply_voicing(list(self.CMAJ7), "imaginary")
