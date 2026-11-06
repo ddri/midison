@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+      - name: Ruff lint
+        run: uvx ruff@0.17.4 check .
+      - name: Ruff format
+        run: uvx ruff@0.17.4 format --check .
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install
+        run: uv sync --locked --extra dev
+      - name: Test
+        run: uv run pytest -q
+
+  # Installs the package the way a user would, ignoring uv.lock, so a new
+  # major release of a loosely pinned dependency can't silently break it.
+  fresh-install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+      - name: Install from source with latest allowed deps
+        run: uv run --isolated --no-project --with . python -c "import midison.mcp_server, midison.cli"
