@@ -30,6 +30,10 @@ jobs:
       - uses: astral-sh/setup-uv@v10.3.3
         with:
           python-version: ${{ matrix.python-version }}
+      # python-rtmidi ships no Python 3.13 wheels, so it builds from source
+      # and needs the ALSA headers on Linux.
+      - name: Install ALSA headers
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
       - name: Install
         run: uv sync --locked --extra dev
       - name: Test
@@ -42,5 +46,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.3.3
+      # python-rtmidi ships no Python 3.13 wheels, so it builds from source
+      # and needs the ALSA headers on Linux.
+      - name: Install ALSA headers
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
       - name: Install from source with latest allowed deps
         run: uv run --isolated --no-project --with . python -c "import midison.mcp_server, midison.cli"
