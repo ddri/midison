@@ -16,11 +16,19 @@ import logging
 import sys
 from typing import Any
 
-from mcp.server import Server
+import jsonschema
+from mcp.server import Server, ServerRequestContext
 from mcp.server.stdio import stdio_server
-from mcp.types import TextContent, Tool
+from mcp.types import (
+    CallToolRequestParams,
+    CallToolResult,
+    ListToolsResult,
+    PaginatedRequestParams,
+    TextContent,
+    Tool,
+)
 
-from midison import config
+from midison import __version__, config
 from midison.ableton import AbletonClient, install_ableton_osc
 from midison.grooves import list_grooves
 from midison.midi_writer import (
@@ -34,8 +42,6 @@ from midison.stream import stream_progression
 from midison.theory import MODE_INTERVALS, parse_pitch_class
 
 logger = logging.getLogger("midison.mcp")
-
-server: Server = Server("midison")
 
 
 # ---------------------------------------------------------------------------
@@ -418,7 +424,6 @@ INSTALL_ABLETON_INTEGRATIONS_SCHEMA = {
 }
 
 
-@server.list_tools()
 async def list_tools() -> list[Tool]:
     return [
         Tool(
@@ -896,7 +901,6 @@ def handle_list_vibes(arguments: dict) -> dict:
 # ---------------------------------------------------------------------------
 
 
-@server.call_tool()
 async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     logger.info("tool call: %s args=%s", name, list(arguments.keys()))
     if name == "generate_midi_progression":
@@ -920,6 +924,57 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     else:
         raise ValueError(f"Unknown tool: {name}")
     return [TextContent(type="text", text=json.dumps(result, indent=2))]
+
+
+# ---------------------------------------------------------------------------
+# MCP SDK adapter
+#
+# list_tools and call_tool above are SDK-agnostic. The 2.x low-level Server
+# takes (ctx, params) handlers and, unlike the 1.x decorators, neither
+# validates tool input against inputSchema nor turns handler exceptions into
+# tool errors. Both matter: a bad argument or a ValueError from the theory
+# engine must reach the model as an isError result it can read and correct,
+# not as a JSON-RPC protocol error.
+# ---------------------------------------------------------------------------
+
+
+def _tool_error(message: str) -> CallToolResult:
+    return CallToolResult(
+        content=[TextContent(type="text", text=message)], is_error=True
+    )
+
+
+async def _on_list_tools(
+    ctx: ServerRequestContext, params: PaginatedRequestParams | None
+) -> ListToolsResult:
+    return ListToolsResult(tools=await list_tools())
+
+
+async def _on_call_tool(
+    ctx: ServerRequestContext, params: CallToolRequestParams
+) -> CallToolResult:
+    arguments = params.arguments or {}
+    schemas = {t.name: t.input_schema for t in await list_tools()}
+    schema = schemas.get(params.name)
+    if schema is not None:
+        try:
+            jsonschema.validate(instance=arguments, schema=schema)
+        except jsonschema.ValidationError as e:
+            return _tool_error(f"Input validation error: {e.message}")
+    try:
+        content = await call_tool(params.name, arguments)
+    except Exception as e:
+        logger.warning("tool %s failed: %s", params.name, e)
+        return _tool_error(str(e))
+    return CallToolResult(content=content, is_error=False)
+
+
+server: Server = Server(
+    "midison",
+    version=__version__,
+    on_list_tools=_on_list_tools,
+    on_call_tool=_on_call_tool,
+)
 
 
 # ---------------------------------------------------------------------------
