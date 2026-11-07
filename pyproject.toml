@@ -1,6 +1,6 @@
 [project]
 name = "midison"
-version = "0.6.0"
+version = "0.6.1"
 description = "Voice-led MIDI chord progressions, songs and grooves for your DAW, as an MCP server and CLI."
 readme = "README.md"
 license = "MIT"
