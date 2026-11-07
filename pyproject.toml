@@ -1,9 +1,33 @@
 [project]
 name = "midison"
 version = "0.6.0"
-description = "MIDI chord progression generator as an MCP Server."
-license = {text = "MIT"}
+description = "Voice-led MIDI chord progressions, songs and grooves for your DAW, as an MCP server and CLI."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "David Ryan" }]
 requires-python = ">=3.11"
+keywords = [
+    "midi",
+    "mcp",
+    "music",
+    "chords",
+    "harmony",
+    "voice-leading",
+    "ableton",
+    "songwriting",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Sound/Audio :: MIDI",
+]
 dependencies = [
     "mido>=1.3.0",
     "mcp>=2.3,<3",
@@ -11,6 +35,12 @@ dependencies = [
     "python-rtmidi>=1.5.0",
     "python-osc>=1.9.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/ddri/midison"
+Repository = "https://github.com/ddri/midison"
+Issues = "https://github.com/ddri/midison/issues"
+Changelog = "https://github.com/ddri/midison/releases"
 
 [project.optional-dependencies]
 dev = [
@@ -26,11 +56,16 @@ banjo-corpus = "midison.corpus:main"
 banjo-mcp = "midison.mcp_server:main"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/midison"]
+
+[tool.hatch.build.targets.sdist]
+# An explicit list: .gitignore re-includes docs/**/*.md, which would otherwise
+# ship internal planning notes in the published archive.
+only-include = ["src", "tests", "README.md", "LICENSE", "pyproject.toml", "uv.lock"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
