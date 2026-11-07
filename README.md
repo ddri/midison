@@ -6,7 +6,31 @@ It runs as an MCP server, which means your AI assistant (Claude Desktop, Cursor,
 
 It is not a bloated plugin. It generates self-contained, voice-led MIDI clips with the root anchored in the chord and notes placed in comfortable mixing registers.
 
-## Setup
+## Install
+
+Midison needs Python 3.11 or newer. The quickest way to run it is with [uv](https://docs.astral.sh/uv/), which needs no separate install step:
+
+```bash
+uvx midison --help
+```
+
+To install the commands permanently:
+
+```bash
+uv tool install midison
+```
+
+Or with pip:
+
+```bash
+pip install midison
+```
+
+The main commands are `midison` (the CLI), `midison-mcp` (the MCP server) and `midison-corpus`. The older `banjo`, `banjo-mcp` and `banjo-corpus` names still work as aliases.
+
+**Linux on Python 3.13:** `python-rtmidi` has no prebuilt package for 3.13 yet, so it compiles during install. Install the ALSA headers first, for example `sudo apt-get install libasound2-dev`. macOS, and Python 3.11 or 3.12, need nothing extra.
+
+## Development
 
 ```bash
 git clone https://github.com/ddri/midison.git
@@ -104,19 +128,32 @@ midison-corpus --output-dir ~/Music/midison-test
 
 ### Connecting
 
-**Claude Desktop** — add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+**Claude Desktop**: add this to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
     "midison": {
-      "command": "/absolute/path/to/midison/.venv/bin/midison-mcp"
+      "command": "uvx",
+      "args": ["--from", "midison", "midison-mcp"]
     }
   }
 }
 ```
 
-**Claude Code / Cursor** — add to your project or global MCP settings:
+Claude Desktop doesn't always inherit your shell's `PATH`. If the server doesn't start, replace `"uvx"` with the full path that `which uvx` prints.
+
+**Claude Code**: register it from the terminal:
+
+```bash
+claude mcp add midison -- uvx --from midison midison-mcp
+```
+
+**Cursor and other MCP hosts**: use the same `command` and `args` as the Claude Desktop example.
+
+If you installed with `uv tool install` or pip, you can use `"command": "midison-mcp"` with no `args` instead.
+
+**Running from a source checkout**: point the host at the checkout's virtual environment:
 
 ```json
 {

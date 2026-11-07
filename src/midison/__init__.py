@@ -1,3 +1,3 @@
 """Midison: MIDI chord progression generator from Roman numeral analysis."""
 
-__version__ = "0.6.0"
+__version__ = "0.6.1"
